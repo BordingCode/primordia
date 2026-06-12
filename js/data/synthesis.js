@@ -33,7 +33,7 @@ export const ITEMS = {
                   riddle: 'Carbon and hydrogen drawn long in a vent’s heat — one end loves water, the other flees it.',
                   fact: 'A fatty acid — a long carbon chain with a water-loving head. The stuff of the first membranes.' },
   phosphate:    { id: 'phosphate', name: 'Phosphate', abbr: 'PO₄', formula: 'PO₄', color: '#ffb24d', kind: 'block',
-                  riddle: 'Phosphorus dressed in oxygen — the spark of ATP and the rungs of the genetic ladder.',
+                  riddle: 'Phosphorus dressed in oxygen — the spark of ATP and the rails of the genetic ladder.',
                   fact: 'Phosphate — phosphorus bound to oxygen. Life’s energy currency and the backbone of RNA/DNA.' },
   protein:      { id: 'protein', name: 'Protein', abbr: 'Prot', color: '#54d7ff', kind: 'polymer',
                   riddle: 'Thread amino acids together, shedding water at each knot, and a worker of the cell is born.',

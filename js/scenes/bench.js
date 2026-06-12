@@ -92,7 +92,9 @@ export class BenchScene {
         this.bonds.push({ a: a.id, b: b.id, order: 1, rest });
         game.sfx.bond();
         game.gl.burst((a.x + b.x) / 2, (a.y + b.y) / 2, 8, { color: rgb01('#bfefff'), size: 14, speed: 70, life: 0.4, alpha: 0.7 });
-        this.completed.clear(); // recompute stability
+        // NOTE: do NOT clear `completed` here — the per-cluster keys already re-evaluate
+        // only the cluster that actually changed. Clearing makes every existing molecule
+        // on the table re-fire its discovery (toast + celebration spam).
       }
     }
   }
@@ -115,7 +117,6 @@ export class BenchScene {
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       if (d > bd.rest * 2.3) {
         this.bonds.splice(i, 1);
-        this.completed.clear();
         game.gl.burst((a.x + b.x) / 2, (a.y + b.y) / 2, 6, { color: rgb01('#ff8f7a'), size: 12, speed: 90, life: 0.35, alpha: 0.7 });
       }
     }
@@ -150,15 +151,20 @@ export class BenchScene {
   onStableMolecule(mol, comp, game) {
     const cx = comp.reduce((s, a) => s + a.x, 0) / comp.length;
     const cy = comp.reduce((s, a) => s + a.y, 0) / comp.length;
-    const isNew = !game.hasMolecule(mol.id);
-    game.celebrate(cx, cy, '#8ef0d0');
-    game.sfx.discover();
-    game.discoverMolecule(mol.id);
-    import('../ui/hud.js').then(UI => {
-      UI.toast(game, { kind: 'molecule', mol, title: isNew ? `Discovered ${mol.name}` : mol.name,
-        sub: formulaText(mol.formula), fact: mol.fact });
-      UI.refreshGoals(game);
-    });
+    if (!game.hasMolecule(mol.id)) {
+      // first time: full celebration + discovery toast
+      game.celebrate(cx, cy, '#8ef0d0');
+      game.sfx.discover();
+      game.discoverMolecule(mol.id);
+      import('../ui/hud.js').then(UI => {
+        UI.toast(game, { kind: 'molecule', title: `Discovered ${mol.name}`, sub: formulaText(mol.formula), fact: mol.fact });
+        UI.refreshGoals(game);
+      });
+    } else {
+      // already known: a quiet little spark, no toast — keeps the table free of clutter
+      game.gl.burst(cx, cy, 16, { color: rgb01('#8ef0d0'), speed: 110, size: 16, life: 0.55, alpha: 0.7 });
+      game.sfx.bond();
+    }
   }
 
   update(dt, game) {

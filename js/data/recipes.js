@@ -6,7 +6,7 @@
 // inputs: array of element symbols smashed together; out: produced element.
 export const FUSION = [
   { in: ['H', 'H'],            out: 'He', name: 'Proton–proton chain',
-    note: 'Two hydrogen nuclei fuse into helium — the reaction that powers the Sun.' },
+    note: 'Hydrogen nuclei fuse, step by step, into helium — the reaction that powers the Sun.' },
   { in: ['He', 'He', 'He'],   out: 'C',  name: 'Triple-alpha process',
     note: 'Three helium nuclei collide almost simultaneously to make carbon. It only happens in the cores of aging stars.' },
   { in: ['C', 'He'],          out: 'O',  name: 'Alpha capture',
@@ -16,7 +16,7 @@ export const FUSION = [
   { in: ['O', 'O'],           out: 'P',  name: 'Oxygen burning',
     note: 'In massive stars, oxygen fuses into heavier elements including phosphorus.' },
   { in: ['O', 'He'],          out: 'S',  name: 'Alpha ladder',
-    note: 'Successive helium captures climb the periodic table toward sulfur.' },
+    note: 'In a massive star, helium nuclei are captured one after another — oxygen, neon, magnesium — climbing toward sulfur.' },
 ];
 
 // ---- Molecules (Era 2: the early-Earth atmosphere & ocean) ----

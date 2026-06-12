@@ -8,7 +8,7 @@ export const ELEMENTS = {
         fact: 'The first and simplest element. Forged in the Big Bang, it makes up ~90% of all atoms in the universe.' },
   He: { sym: 'He', name: 'Helium',     z: 2,  valence: 0, mass: 4,
         color: '#ffe9b0', glow: '#ffd66b', r: 17,
-        fact: 'A noble gas — its electron shell is full, so it refuses to bond. Born when two hydrogen nuclei fuse inside stars.' },
+        fact: 'A noble gas — its electron shell is full, so it refuses to bond. Born when hydrogen nuclei fuse together inside stars.' },
   C:  { sym: 'C',  name: 'Carbon',     z: 6,  valence: 4, mass: 12,
         color: '#7d8aa0', glow: '#54d7ff', r: 22,
         fact: 'The backbone of all life. With four bonds it builds endless chains and rings. Forged by the triple-alpha process in dying stars.' },
