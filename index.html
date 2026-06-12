@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05060e" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Primordia — grow life from stardust</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/icon.svg" />
+<link rel="manifest" href="manifest.json" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css?v=1" />
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="fx"></canvas>
+
+  <!-- top bar -->
+  <header id="hud">
+    <div class="brand">PRIMORDIA<span class="scene-title" id="sceneTitle"></span></div>
+    <div class="hud-right">
+      <button class="insight" id="insightBtn" title="Insight — earned by discovery">✦ <span id="insightVal">0</span></button>
+      <button class="iconbtn" id="codexBtn" title="Codex">☷</button>
+      <button class="iconbtn" id="menuBtn" title="Menu">⋯</button>
+    </div>
+  </header>
+
+  <!-- objectives -->
+  <aside id="objectives" class="panel">
+    <div class="obj-head"><span id="objTitle">Objectives</span><button class="mini" id="objToggle">–</button></div>
+    <div id="objList"></div>
+  </aside>
+
+  <!-- bottom scene nav -->
+  <nav id="tabs">
+    <button class="tab" data-tab="forge"><span class="ico">✶</span><span>Forge</span></button>
+    <button class="tab" data-tab="bench"><span class="ico">⬡</span><span>Bench</span></button>
+    <button class="tab" data-tab="world"><span class="ico">◍</span><span>World</span></button>
+  </nav>
+
+  <!-- toasts -->
+  <div id="toasts"></div>
+
+  <!-- codex overlay -->
+  <div id="codex" class="overlay hidden">
+    <div class="sheet">
+      <div class="sheet-head"><h2>Codex</h2><button class="close" data-close>✕</button></div>
+      <div class="codex-tabs">
+        <button class="ctab active" data-ctab="elements">Elements</button>
+        <button class="ctab" data-ctab="molecules">Molecules</button>
+      </div>
+      <div id="codexBody"></div>
+    </div>
+  </div>
+
+  <!-- menu overlay -->
+  <div id="menu" class="overlay hidden">
+    <div class="sheet small">
+      <div class="sheet-head"><h2>Menu</h2><button class="close" data-close>✕</button></div>
+      <label class="row"><span>Sound</span><input type="checkbox" id="soundToggle" checked /></label>
+      <button class="danger" id="resetBtn">Reset all progress</button>
+      <p class="credit">Primordia · a chemistry-of-life journey<br/>Every recipe is real science.</p>
+    </div>
+  </div>
+
+  <!-- intro -->
+  <div id="intro" class="overlay">
+    <div class="intro-inner">
+      <div class="intro-atom">H</div>
+      <h1>PRIMORDIA</h1>
+      <p class="lede">In the beginning there was only hydrogen.</p>
+      <p class="sub">Forge it into the elements of life. Bond those into the molecules of life.
+        Grow a dead world into a living one — one real reaction at a time.</p>
+      <button id="beginBtn">Begin</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js?v=1"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+</script>
+</body>
+</html>

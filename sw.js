@@ -1,0 +1,65 @@
+// sw.js — offline cache.
+// Strategy: navigations = network-first (fresh deploys win), assets = stale-while-revalidate
+// (instant + self-updating). This avoids the "GitHub Pages stuck on old version" trap.
+const CACHE = 'primordia-v2';
+const ASSETS = [
+  './',
+  './index.html',
+  './css/style.css?v=1',
+  './manifest.json',
+  './assets/icon.svg',
+  './assets/icon-maskable.svg',
+  './js/main.js?v=1',
+  './js/engine/rng.js',
+  './js/engine/save.js',
+  './js/engine/audio.js',
+  './js/engine/input.js',
+  './js/engine/loop.js',
+  './js/render/gl.js',
+  './js/render/molecules.js',
+  './js/data/elements.js',
+  './js/data/recipes.js',
+  './js/scenes/forge.js',
+  './js/scenes/bench.js',
+  './js/scenes/world.js',
+  './js/ui/hud.js',
+];
+
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  const url = new URL(req.url);
+  if (req.method !== 'GET') return;
+  if (url.origin !== location.origin) return; // let fonts hit network directly
+
+  // Navigations: network-first so a new deploy is picked up immediately.
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(res => {
+        caches.open(CACHE).then(c => c.put('./index.html', res.clone())).catch(() => {});
+        return res;
+      }).catch(() => caches.match(req).then(h => h || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Assets: stale-while-revalidate — serve cache fast, refresh in background.
+  e.respondWith(
+    caches.match(req).then(hit => {
+      const net = fetch(req).then(res => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() => hit);
+      return hit || net;
+    })
+  );
+});

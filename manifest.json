@@ -1,0 +1,15 @@
+{
+  "name": "Primordia — grow life from stardust",
+  "short_name": "Primordia",
+  "description": "A chemistry-of-life discovery game. Forge real elements, bond real molecules, and grow a dead world into a living one.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05060e",
+  "theme_color": "#05060e",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
