@@ -47,14 +47,16 @@ export class LabScene {
     const ey = game.H * 0.60;
     const n = ENERGIES.length, gap = Math.min(84, game.W / (n + 0.5)), sx = game.W / 2 - (n - 1) * gap / 2;
     this.energyChips = ENERGIES.map((e, i) => ({ id: e.id, x: sx + i * gap, y: ey, r: 24, glyph: e.glyph, color: e.color, name: e.name }));
-    // palette (all discovered reagents)
+    // palette (all discovered reagents) — laid out ABOVE the bottom tab bar
     const ids = this.reagentIds(game);
-    const maxPer = 9, rows = Math.ceil(ids.length / maxPer) || 1, per = Math.ceil(ids.length / rows);
-    const baseY = game.H - 96 - (rows - 1) * 42;
+    const maxPer = 8, rows = Math.ceil(ids.length / maxPer) || 1, per = Math.ceil(ids.length / rows);
+    const rowH = 40;
+    const bottomRowY = game.H - 136;                 // clears the ~80px tab bar with margin
+    const baseY = bottomRowY - (rows - 1) * rowH;     // first (top) row
     this.palette = ids.map((id, i) => {
       const r = Math.floor(i / per), c = i % per, inRow = Math.min(per, ids.length - r * per);
       const gap2 = game.W / (inRow + 1);
-      return { id, x: gap2 * (c + 1), y: baseY + r * 42, r: 18, vis: visual(id) };
+      return { id, x: gap2 * (c + 1), y: baseY + r * rowH, r: 17, vis: visual(id) };
     });
   }
   resize(game) { this.layout(game); }

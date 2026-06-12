@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#05060e" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Primordia — grow life from stardust</title>
@@ -13,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=1" />
+<link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
 <div id="stage">
@@ -78,11 +79,41 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
-  }
+  // --- resilience layer (plain script, runs even if the game module fails to boot) ---
+  (function () {
+    // Begin always at least dismisses the intro, even if the game errored on load.
+    var b = document.getElementById('beginBtn');
+    if (b) b.addEventListener('click', function () {
+      var i = document.getElementById('intro'); if (i) i.classList.add('hidden');
+    });
+
+    // Self-heal: if a stale cached version stops the game from booting, wipe the
+    // service worker + caches once and reload so the player gets a working build.
+    async function heal() {
+      try {
+        if ('serviceWorker' in navigator) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          for (var i = 0; i < regs.length; i++) await regs[i].unregister();
+        }
+        if (window.caches) { var ks = await caches.keys(); for (var j = 0; j < ks.length; j++) await caches.delete(ks[j]); }
+      } catch (e) {}
+      location.reload();
+    }
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (window.__primordia) return;                       // booted fine
+        if (sessionStorage.getItem('primordia-healed')) return; // already retried — avoid a loop
+        sessionStorage.setItem('primordia-healed', '1');
+        heal();
+      }, 3500);
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    }
+  })();
 </script>
 </body>
 </html>
