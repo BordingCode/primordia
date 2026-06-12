@@ -4,10 +4,16 @@ const KEY = 'primordia.save.v1';
 const DEFAULT = {
   discoveredElements: ['H'],     // you always start with hydrogen
   discoveredMolecules: [],
+  discoveredItems: [],           // building blocks, polymers, protocell
   insight: 0,
-  hintsUsed: {},                 // moleculeId -> tier of hint revealed
+  hintsUsed: {},                 // id -> tier of hint revealed
   scene: 'forge',
-  inthalSeen: false,
+  introSeen: false,
+  benchReached: false,
+  labReached: false,
+  cellReached: false,
+  colonyReached: false,          // stable protocell colony achieved
+  lifeBegun: false,              // world finale triggered
 };
 
 export function load() {

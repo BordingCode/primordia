@@ -107,3 +107,44 @@ export function hexA(hex, a) {
 }
 // normalised [0..1] rgb for GL particles
 export function rgb01(hex) { const [r, g, b] = parse(hex); return [r / 255, g / 255, b / 255]; }
+
+// Draw a building-block / polymer / cell as a luminous rounded token with a short label.
+export function drawToken(ctx, x, y, item, { r = 30, pulse = 0, dim = false } = {}) {
+  const col = item.color || '#8ef0d0';
+  ctx.save();
+  // glow
+  ctx.globalCompositeOperation = 'lighter';
+  const gr = r * (2.0 + pulse * 0.6);
+  const g = ctx.createRadialGradient(x, y, r * 0.3, x, y, gr);
+  g.addColorStop(0, hexA(col, dim ? 0.14 : 0.30)); g.addColorStop(1, hexA(col, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, gr, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // body — hexagon-ish rounded disc with glassy gradient
+  const body = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r * 1.1);
+  body.addColorStop(0, lighten(col, 0.55));
+  body.addColorStop(0.5, col);
+  body.addColorStop(1, darken(col, 0.5));
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = body; ctx.globalAlpha = dim ? 0.5 : 1; ctx.fill(); ctx.globalAlpha = 1;
+
+  // rim
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.lineWidth = Math.max(1.5, r * 0.1); ctx.strokeStyle = hexA(col, 0.6);
+  ctx.beginPath(); ctx.arc(x, y, r * 0.95, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  // specular
+  const sg = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, 0, x - r * 0.35, y - r * 0.35, r * 0.55);
+  sg.addColorStop(0, 'rgba(255,255,255,0.7)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.55, 0, Math.PI * 2); ctx.fill();
+
+  // label
+  ctx.fillStyle = 'rgba(8,16,24,0.9)';
+  const txt = item.abbr || '?';
+  const fs = Math.max(9, Math.min(r * 0.7, r * 2 / Math.max(2, txt.length)));
+  ctx.font = `700 ${Math.round(fs)}px "Outfit", system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, x, y + 1);
+  ctx.restore();
+}
