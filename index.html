@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=2" />
+<link rel="stylesheet" href="css/style.css?v=3" />
 </head>
 <body>
 <div id="stage">
@@ -66,6 +66,14 @@
     </div>
   </div>
 
+  <!-- learn / help modal -->
+  <div id="learn" class="overlay hidden">
+    <div class="sheet small">
+      <div class="sheet-head"><h2>Need a hand?</h2><button class="close" data-close>✕</button></div>
+      <div id="learnBody"></div>
+    </div>
+  </div>
+
   <!-- intro -->
   <div id="intro" class="overlay">
     <div class="intro-inner">
@@ -79,7 +87,7 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 <script>
   // --- resilience layer (plain script, runs even if the game module fails to boot) ---
   (function () {

@@ -1,7 +1,8 @@
 // hud.js — all DOM UI: dynamic nav, objectives, codex, toasts, hints, intro, menu.
 import { ELEMENTS, ELEMENT_LIST, el } from '../data/elements.js';
-import { MOLECULES } from '../data/recipes.js';
+import { MOLECULES, FUSION } from '../data/recipes.js';
 import { ITEMS, SYNTH, ENERGIES, item as synthItem, energy as energyDef } from '../data/synthesis.js';
+import { LEARN } from '../data/learn.js';
 import { unlock as audioUnlock } from '../engine/audio.js';
 
 let G = null, env = null;
@@ -117,15 +118,63 @@ function renderObjectives() {
   }
 }
 
+// ---- recipe strings (only shown after a paid Reveal, inside the Learn modal) ----
+function atomBreakdown(formula) {
+  return Object.entries(formula).map(([s, n]) => (n > 1 ? n + '× ' : '') + s).join(' + ');
+}
+function fusionRecipeStr(sym) {
+  const r = FUSION.find(f => f.out === sym); if (!r) return null;
+  const counts = {}; r.in.forEach(s => counts[s] = (counts[s] || 0) + 1);
+  return Object.entries(counts).map(([s, n]) => (n > 1 ? n + '× ' : '') + ELEMENTS[s].name).join(' + ') + '  ·  in the star’s core';
+}
+function productRecipeStr(rec) {
+  const en = energyDef(rec.energy);
+  return reagentText(rec) + (rec.energy === 'none' ? '  ·  no energy needed' : `  ·  ${en.glyph} ${en.name}`);
+}
+
+// A free "Learn" button that opens the help modal (teaches; reveal is a deeper paid step).
+function learnButton(opts) {
+  const btn = document.createElement('button');
+  btn.className = 'learnbtn'; btn.innerHTML = 'ⓘ Learn';
+  btn.addEventListener('click', () => openHelp(opts));
+  return btn;
+}
+
+// The help modal: shows the riddle + an educational hint for free; the exact recipe is a
+// separate, optional paid reveal — so you can learn about a challenge without it being solved for you.
+function openHelp(opts) {
+  const body = $('learnBody');
+  function render() {
+    const hinted = opts.id ? (G.state.hintsUsed[opts.id] || 0) >= 2 : false;
+    let html = '';
+    if (opts.riddle) html += `<p class="learn-riddle">“${opts.riddle}”</p>`;
+    html += `<p class="learn-text">${opts.learn}</p>`;
+    if (opts.recipe) {
+      if (hinted) html += `<div class="learn-recipe"><span>Recipe</span><b>${opts.recipe}</b></div>`;
+      else html += `<button class="reveal-btn" id="doReveal">Reveal the exact recipe · ✦${opts.cost}</button>
+        <p class="learn-foot">Try to work it out first — a hint-free solve is its own reward.</p>`;
+    }
+    body.innerHTML = html;
+    const rb = document.getElementById('doReveal');
+    if (rb) rb.addEventListener('click', () => {
+      if (G.spend(opts.cost)) { G.state.hintsUsed[opts.id] = 2; G.persist(); render(); renderObjectives(); }
+      else flash(`Not enough insight (✦${opts.cost})`);
+    });
+  }
+  render();
+  $('learn').classList.remove('hidden');
+}
+
 function elemGoal(sym, bonus = false) {
   const has = G.hasElement(sym), e = el(sym);
   const d = document.createElement('div'); d.className = 'goal' + (has ? ' done' : '');
   d.innerHTML = `<div class="goal-dot" style="--c:${e.glow}">${has ? '✓' : ''}</div>
-    <div class="goal-main">${e.name}${bonus ? ' <em>(bonus)</em>' : ''}<div class="goal-sub">${has ? e.fact : 'Fuse lighter nuclei in the Forge'}</div></div>`;
+    <div class="goal-main">${e.name}${bonus ? ' <em>(bonus)</em>' : ''}<div class="goal-sub">${has ? e.fact : 'Forge it from lighter nuclei'}</div></div>`;
+  if (!has && LEARN[sym]) d.appendChild(learnButton({ riddle: null, learn: LEARN[sym], recipe: fusionRecipeStr(sym), cost: 6, id: 'el_' + sym }));
   return d;
 }
 
-function genericGoal({ has, hinted, name, formula, fact, riddle, dotColor, revealLabel, onReveal, locked, lockedText }) {
+function genericGoal({ has, hinted, name, formula, fact, riddle, dotColor, locked, lockedText, help }) {
   const d = document.createElement('div');
   d.className = 'goal' + (has ? ' done' : '') + (locked ? ' locked-goal' : '');
   let body;
@@ -133,23 +182,15 @@ function genericGoal({ has, hinted, name, formula, fact, riddle, dotColor, revea
   else if (locked) body = `<b>? ? ?</b><div class="goal-sub">${lockedText}</div>`;
   else body = `<b>? ? ?</b>${hinted ? ` <span class="f">${formula || riddle}</span>` : ''}<div class="goal-sub riddle">“${riddle}”</div>`;
   d.innerHTML = `<div class="goal-dot" style="--c:${dotColor}">${has ? '✓' : locked ? '🔒' : '◇'}</div><div class="goal-main">${body}</div>`;
-  if (!has && !locked && !hinted && onReveal) {
-    const btn = document.createElement('button'); btn.className = 'hintbtn'; btn.innerHTML = revealLabel;
-    btn.addEventListener('click', onReveal); d.appendChild(btn);
-  }
+  if (!has && help) d.appendChild(learnButton(help));
   return d;
 }
 
 function molGoal(m) {
   const has = G.hasMolecule(m.id), hinted = (G.state.hintsUsed[m.id] || 0) >= 2;
   return genericGoal({
-    has, hinted, name: m.name, formula: fsub(m.formula), fact: m.fact, riddle: m.riddle,
-    dotColor: '#8ef0d0', revealLabel: 'Reveal ✦6',
-    onReveal: () => {
-      if (G.spend(6)) { G.state.hintsUsed[m.id] = 2; G.persist(); renderObjectives();
-        toast(G, { kind: 'hint', title: 'Recipe revealed', sub: `${m.name} = ${fsub(m.formula)}`, fact: 'A clean, hint-free solve earns more respect — but the world grows either way.' }); }
-      else flash('Not enough insight (✦6)');
-    },
+    has, hinted, name: m.name, formula: fsub(m.formula), fact: m.fact, riddle: m.riddle, dotColor: '#8ef0d0',
+    help: { riddle: m.riddle, learn: LEARN[m.id], recipe: atomBreakdown(m.formula), cost: 6, id: m.id },
   });
 }
 
@@ -162,25 +203,20 @@ function productGoal(rec) {
   return genericGoal({
     has, hinted, name: it.name, formula: it.formula || it.abbr, fact: it.fact, riddle: it.riddle,
     dotColor: it.color, locked: !has && !prereqMet, lockedText: 'Discover its ingredients first',
-    revealLabel: `Reveal ✦${cost}`,
-    onReveal: () => {
-      if (G.spend(cost)) { G.state.hintsUsed[rec.product] = 2; G.persist(); renderObjectives();
-        const en = energyDef(rec.energy);
-        toast(G, { kind: 'hint', title: `${it.name} — recipe`, sub: `${reagentText(rec)}  ·  ${en.glyph} ${en.name}`, fact: rec.note }); }
-      else flash(`Not enough insight (✦${cost})`);
-    },
+    help: { riddle: it.riddle, learn: LEARN[rec.product], recipe: productRecipeStr(rec), cost, id: rec.product },
   });
 }
 
 function cellGoal() {
-  const d = document.createElement('div'); d.className = 'goal';
-  const n = (G.scenes.cell && G.scenes.cell.cells) ? G.scenes.cell.cells.length : 0;
-  const target = G.scenes.cell ? G.scenes.cell.TARGET : 6;
+  const d = document.createElement('div');
+  const n = (G.scenes.cell && G.scenes.cell.cells) ? G.scenes.cell.cells.filter(c => !c.dead).length : 0;
+  const target = G.scenes.cell ? G.scenes.cell.TARGET : 8;
   const done = G.state.colonyReached;
   d.className = 'goal' + (done ? ' done' : '');
   d.innerHTML = `<div class="goal-dot" style="--c:#a8ffe0">${done ? '✓' : '◇'}</div>
     <div class="goal-main"><b>Grow a colony</b> <span class="f">${Math.min(n, target)}/${target}</span>
     <div class="goal-sub">Feed your protocell so it grows and divides. If its energy runs out, it dies. Reach ${target} living cells to seed the world.</div></div>`;
+  if (!done) d.appendChild(learnButton({ learn: LEARN.cell }));
   return d;
 }
 function worldGoal() {
@@ -188,6 +224,7 @@ function worldGoal() {
   const begun = G.state.lifeBegun;
   d.innerHTML = `<div class="goal-main"><b>${begun ? 'Life has taken hold' : 'A world awaiting life'}</b>
     <div class="goal-sub">${begun ? 'Guide photosynthesis and watch the world green and breathe.' : 'Seed your protocell colony to bring the planet alive.'}</div></div>`;
+  d.appendChild(learnButton({ learn: LEARN.world }));
   return d;
 }
 
