@@ -28,7 +28,10 @@ const ctx = fxCanvas.getContext('2d');
 const stage = document.getElementById('stage');
 
 const gl = new GLLayer(glCanvas);
-const input = createInput(stage);
+// Attach input to the CANVAS only — not the whole #stage — so the touchstart
+// preventDefault for canvas dragging never cancels taps on the HTML buttons (Begin,
+// tabs, codex, hints) that sit on top of the canvas. (Critical for touch devices.)
+const input = createInput(fxCanvas);
 
 const game = {
   W: 0, H: 0, dpr: 1, time: 0,

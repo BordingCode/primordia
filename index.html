@@ -79,15 +79,15 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=2"></script>
+<script type="module" src="js/main.js?v=3"></script>
 <script>
   // --- resilience layer (plain script, runs even if the game module fails to boot) ---
   (function () {
-    // Begin always at least dismisses the intro, even if the game errored on load.
+    // Begin always at least dismisses the intro — on click AND touchend — even if the
+    // game errored on load or something suppressed the synthetic click on a touch device.
     var b = document.getElementById('beginBtn');
-    if (b) b.addEventListener('click', function () {
-      var i = document.getElementById('intro'); if (i) i.classList.add('hidden');
-    });
+    function dismissIntro() { var i = document.getElementById('intro'); if (i) i.classList.add('hidden'); }
+    if (b) { b.addEventListener('click', dismissIntro); b.addEventListener('touchend', dismissIntro); }
 
     // Self-heal: if a stale cached version stops the game from booting, wipe the
     // service worker + caches once and reload so the player gets a working build.
