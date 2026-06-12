@@ -111,6 +111,14 @@
     });
 
     if ('serviceWorker' in navigator) {
+      // Auto-reload once when a NEW service worker takes control, so updates reach the
+      // player without a manual hard-refresh. Only when updating from an existing worker
+      // (not on first install), and guarded against reload loops.
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (window.__swReloaded) return; window.__swReloaded = true; location.reload();
+        });
+      }
       window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
     }
   })();
