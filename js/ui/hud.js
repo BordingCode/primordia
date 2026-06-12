@@ -3,6 +3,7 @@ import { ELEMENTS, ELEMENT_LIST, el } from '../data/elements.js';
 import { MOLECULES, FUSION } from '../data/recipes.js';
 import { ITEMS, SYNTH, ENERGIES, item as synthItem, energy as energyDef } from '../data/synthesis.js';
 import { LEARN } from '../data/learn.js';
+import { HOWTO } from '../data/howto.js';
 import { unlock as audioUnlock } from '../engine/audio.js';
 
 let G = null, env = null;
@@ -50,6 +51,8 @@ export function init(game, environment) {
   const st = $('soundToggle'); st.checked = env.audioIsEnabled();
   st.addEventListener('change', () => env.setAudioEnabled(st.checked));
   $('resetBtn').addEventListener('click', () => { if (confirm('Reset all progress?')) env.resetSave(); });
+  $('howtoBtn').addEventListener('click', () => openHowto(G.sceneName));
+  $('howtoOk').addEventListener('click', () => $('howto').classList.add('hidden'));
 
   if (window.innerWidth < 560) { $('objectives').classList.add('collapsed'); $('objToggle').textContent = '+'; }
   // On phones, tapping the play field auto-collapses the objectives drawer so it never
@@ -81,6 +84,24 @@ export function setInsight(n) { $('insightVal').textContent = n; }
 export function setActiveTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   renderObjectives();
+}
+
+// ---------------- How-it-works guide ----------------
+export function openHowto(scene) {
+  const h = HOWTO[scene]; if (!h) return;
+  $('howtoTitle').textContent = h.title;
+  const steps = h.steps.map((s, i) => `<li><span class="step-n">${i + 1}</span><span>${s}</span></li>`).join('');
+  $('howtoBody').innerHTML = `<p class="howto-intro">${h.intro}</p><ol class="howto-steps">${steps}</ol>`
+    + (h.tip ? `<p class="howto-tip"><b>Tip:</b> ${h.tip}</p>` : '');
+  $('howto').classList.remove('hidden');
+}
+// Auto-show the guide the first time a stage is entered (once the intro is gone).
+export function maybeHowto(scene) {
+  if (!HOWTO[scene]) return;
+  if ($('intro') && !$('intro').classList.contains('hidden')) return; // wait until intro dismissed
+  if (G.state.howtoSeen[scene]) return;
+  G.state.howtoSeen[scene] = true; G.persist();
+  openHowto(scene);
 }
 
 // transient top banner
@@ -135,7 +156,7 @@ function productRecipeStr(rec) {
 // A free "Learn" button that opens the help modal (teaches; reveal is a deeper paid step).
 function learnButton(opts) {
   const btn = document.createElement('button');
-  btn.className = 'learnbtn'; btn.innerHTML = 'ⓘ Learn';
+  btn.className = 'learnbtn'; btn.innerHTML = 'Learn';
   btn.addEventListener('click', () => openHelp(opts));
   return btn;
 }

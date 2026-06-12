@@ -97,6 +97,7 @@ const game = {
     this.state.scene = name;
     if (this.scene.enter) this.scene.enter(this);
     UI.setSceneTitle(this.scene.title || name);
+    UI.maybeHowto(name);
     this.persist();
   },
 
@@ -191,7 +192,8 @@ function boot() {
   UI.setInsight(game.state.insight);
   UI.refreshCodex(game);
   loop.start();
-  if (!game.state.introSeen) UI.showIntro(game, () => { game.state.introSeen = true; game.persist(); });
+  if (!game.state.introSeen) UI.showIntro(game, () => { game.state.introSeen = true; game.persist(); UI.maybeHowto(game.sceneName); });
+  else UI.maybeHowto(game.sceneName);
 }
 
 boot();

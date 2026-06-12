@@ -9,6 +9,7 @@ const DEFAULT = {
   hintsUsed: {},                 // id -> tier of hint revealed
   scene: 'forge',
   introSeen: false,
+  howtoSeen: {},                 // sceneId -> true once the "how it works" guide was shown
   benchReached: false,
   labReached: false,
   cellReached: false,
