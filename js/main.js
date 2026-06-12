@@ -102,10 +102,12 @@ const game = {
   labUnlocked() { return ['CH4', 'NH3', 'H2O'].every(id => this.hasMolecule(id)); },
   cellUnlocked() { return this.hasItem('protocell'); },
   stageUnlocked(id) {
-    if (id === 'forge' || id === 'world') return id === 'forge' ? true : this.benchUnlocked();
+    if (id === 'forge') return true;
     if (id === 'bench') return this.benchUnlocked();
     if (id === 'lab') return this.labUnlocked();
     if (id === 'cell') return this.cellUnlocked();
+    // World opens the moment the first molecule exists, so it's never a barren screen.
+    if (id === 'world') return this.state.discoveredMolecules.length >= 1;
     return false;
   },
   checkGates() {

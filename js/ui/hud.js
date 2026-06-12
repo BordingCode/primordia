@@ -51,6 +51,13 @@ export function init(game, environment) {
   $('resetBtn').addEventListener('click', () => { if (confirm('Reset all progress?')) env.resetSave(); });
 
   if (window.innerWidth < 560) { $('objectives').classList.add('collapsed'); $('objToggle').textContent = '+'; }
+  // On phones, tapping the play field auto-collapses the objectives drawer so it never
+  // blocks the scene (you open it to read, then just tap to play).
+  const fx = $('fx');
+  if (fx) fx.addEventListener('pointerdown', () => {
+    const p = $('objectives');
+    if (window.innerWidth < 560 && !p.classList.contains('collapsed')) { p.classList.add('collapsed'); $('objToggle').textContent = '+'; }
+  });
   if (G.state.introSeen) $('intro').classList.add('hidden');
 }
 

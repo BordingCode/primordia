@@ -44,6 +44,9 @@ export const MOLECULES = [
   { id: 'NH3', name: 'Ammonia',        formula: { N: 1, H: 3 },  tier: 2,
     riddle: 'Three small partners and a lone pair, sharp to the nose. It will lend its nitrogen to life.',
     fact: 'NH₃ — nitrogen with three hydrogens and a lone pair. The nitrogen source for the first amino acids.' },
+  { id: 'H2S', name: 'Hydrogen sulfide', formula: { S: 1, H: 2 }, tier: 2,
+    riddle: 'A sulfur cradling two small partners — the rotten-egg breath of volcanoes that fed the very first microbes.',
+    fact: 'H₂S — hydrogen sulfide. It pours from deep-sea vents, and the earliest microbes drew their energy from it long before oxygen existed.' },
 ];
 
 export function moleculeByFormula(counts) {

@@ -6,7 +6,9 @@ import { drawAtom, drawBond, hexA, rgb01 } from '../render/molecules.js';
 import { el, ELEMENTS } from '../data/elements.js';
 import { MOLECULES, moleculeByFormula } from '../data/recipes.js';
 
-const BOND_ELEMENTS = ['H', 'C', 'N', 'O', 'P', 'S'];
+// Atoms you can bond on the Bench. (Phosphorus has no stable small bench molecule here —
+// it's used as a raw reagent in the Lab — so it's intentionally not bondable.)
+const BOND_ELEMENTS = ['H', 'C', 'N', 'O', 'S'];
 
 export class BenchScene {
   constructor() {

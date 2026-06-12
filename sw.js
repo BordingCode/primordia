@@ -1,7 +1,7 @@
 // sw.js — offline cache.
 // Strategy: navigations = network-first (fresh deploys win), assets = stale-while-revalidate
 // (instant + self-updating). This avoids the "GitHub Pages stuck on old version" trap.
-const CACHE = 'primordia-v4';
+const CACHE = 'primordia-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -41,18 +41,18 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   if (url.origin !== location.origin) return; // let fonts hit network directly
 
-  // Navigations: network-first so a new deploy is picked up immediately.
-  if (req.mode === 'navigate') {
+  // Navigations + JS modules: network-first so a new deploy is picked up on the first reload.
+  if (req.mode === 'navigate' || url.pathname.endsWith('.js')) {
     e.respondWith(
       fetch(req).then(res => {
-        caches.open(CACHE).then(c => c.put('./index.html', res.clone())).catch(() => {});
+        if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); }
         return res;
-      }).catch(() => caches.match(req).then(h => h || caches.match('./index.html')))
+      }).catch(() => caches.match(req).then(h => h || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)))
     );
     return;
   }
 
-  // Assets: stale-while-revalidate — serve cache fast, refresh in background.
+  // Other assets (css/img/fonts): stale-while-revalidate — serve cache fast, refresh in background.
   e.respondWith(
     caches.match(req).then(hit => {
       const net = fetch(req).then(res => {

@@ -6,11 +6,11 @@ import { hexA, rgb01 } from '../render/molecules.js';
 export class CellScene {
   constructor() {
     this.title = 'First Life';
-    this.TARGET = 6;
-    this.CAP = 22;
+    this.TARGET = 8;
+    this.CAP = 24;
     this.cells = [];
     this.food = [];
-    this.foodBudget = 5; this.foodMax = 5; this.regen = 0;
+    this.foodBudget = 6; this.foodMax = 6; this.regen = 0;
     this.started = false;
     this.deathMsgT = 0;
   }
@@ -18,7 +18,7 @@ export class CellScene {
   enter(game) {
     game.gl.setNebula({ colA: [0.06, 0.20, 0.30], colB: [0.10, 0.30, 0.26], intensity: 0.9, focus: [0.5, 0.45] });
     this.layout(game);
-    if (!this.started && game.hasItem('protocell')) { this.spawnCell(this.cx, this.cy, 0.8); this.started = true; }
+    if (!this.started && game.hasItem('protocell')) { this.spawnCell(this.cx, this.cy, 0.88); this.started = true; }
   }
   layout(game) {
     this.cx = game.W / 2; this.cy = game.H * 0.44;
@@ -27,16 +27,16 @@ export class CellScene {
   resize(game) { this.layout(game); }
 
   spawnCell(x, y, energy = 0.7) {
-    this.cells.push({ x, y, vx: 0, vy: 0, energy, size: 16 + Math.random() * 4, wob: Math.random() * 6, dead: 0 });
+    this.cells.push({ x, y, vx: 0, vy: 0, energy, size: 20 + Math.random() * 2, wob: Math.random() * 6, dead: 0 });
   }
 
   onDown(x, y, game) {
     if (Math.hypot(x - this.cx, y - this.cy) > this.R) return;
     if (this.foodBudget < 1) { import('../ui/hud.js').then(UI => UI.flash('No nutrients left — they’re replenishing')); game.sfx.reject(); return; }
     this.foodBudget -= 1;
-    for (let i = 0; i < 7; i++) {
-      const a = Math.random() * Math.PI * 2, r = Math.random() * 34;
-      this.food.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, life: 14 });
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 38;
+      this.food.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, life: 15 });
     }
     game.sfx.pickup();
     game.gl.spawn(x, y, { color: [0.6, 1, 0.8], size: 22, alpha: 0.6, life: 0.5 });
@@ -46,7 +46,7 @@ export class CellScene {
   update(dt, game) {
     // food budget regen
     this.regen += dt;
-    if (this.regen > 2.2 && this.foodBudget < this.foodMax) { this.foodBudget++; this.regen = 0; }
+    if (this.regen > 1.7 && this.foodBudget < this.foodMax) { this.foodBudget++; this.regen = 0; }
     this.deathMsgT = Math.max(0, this.deathMsgT - dt);
 
     // food decay + clamp to dish
@@ -58,11 +58,11 @@ export class CellScene {
     for (const c of this.cells) {
       if (c.dead) { c.dead += dt; continue; }
       // energy drain scales gently with crowding
-      c.energy -= (0.040 + this.cells.length * 0.0016) * dt;
+      c.energy -= (0.030 + this.cells.length * 0.0013) * dt;
       // seek nearest food
       let best = null, bd = 1e9;
       for (const f of this.food) { const d = Math.hypot(f.x - c.x, f.y - c.y); if (d < bd) { bd = d; best = f; } }
-      if (best && bd < 220) {
+      if (best && bd < 270) {
         const ux = (best.x - c.x) / bd, uy = (best.y - c.y) / bd;
         c.vx += ux * 60 * dt; c.vy += uy * 60 * dt;
       } else {
@@ -76,18 +76,18 @@ export class CellScene {
       // eat
       for (let i = this.food.length - 1; i >= 0; i--) {
         const f = this.food[i];
-        if (Math.hypot(f.x - c.x, f.y - c.y) < c.size + 6) {
+        if (Math.hypot(f.x - c.x, f.y - c.y) < c.size + 8) {
           this.food.splice(i, 1);
           c.energy = Math.min(1, c.energy + 0.16);
           c.size = Math.min(28, c.size + 0.5);
           game.gl.spawn(c.x, c.y, { color: [0.6, 1, 0.8], size: 14, alpha: 0.7, life: 0.4 });
         }
       }
-      // divide
-      if (c.energy > 0.86 && c.size > 24 && this.cells.length < this.CAP) {
-        c.energy *= 0.5; c.size *= 0.7;
+      // divide — needs sustained feeding (size near full); both halves keep a healthy charge
+      if (c.energy > 0.9 && c.size > 26 && this.cells.length < this.CAP) {
+        c.energy = 0.5; c.size *= 0.72;
         const a = Math.random() * Math.PI * 2;
-        this.spawnCell(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 20, c.energy);
+        this.spawnCell(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 20, 0.5);
         game.sfx.bond();
         game.gl.burst(c.x, c.y, 14, { color: [0.6, 1, 0.85], size: 14, speed: 70, life: 0.5, alpha: 0.7 });
       }
