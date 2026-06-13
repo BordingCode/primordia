@@ -57,8 +57,9 @@ export class CellScene {
 
     for (const c of this.cells) {
       if (c.dead) { c.dead += dt; continue; }
-      // energy drain scales gently with crowding
-      c.energy -= (0.030 + this.cells.length * 0.0013) * dt;
+      // energy drain — staying alive costs real energy, and a crowd costs more. A few
+      // neglected cells WILL die: you have to actively keep the whole colony fed.
+      c.energy -= (0.052 + this.cells.length * 0.0024) * dt;
       // seek nearest food
       let best = null, bd = 1e9;
       for (const f of this.food) { const d = Math.hypot(f.x - c.x, f.y - c.y); if (d < bd) { bd = d; best = f; } }
@@ -100,10 +101,14 @@ export class CellScene {
     // colony perished
     if (this.started && living.length === 0) {
       this.deathMsgT = 3.2;
-      import('../ui/hud.js').then(UI => UI.flash('The colony perished — a fresh protocell forms'));
+      game.state.coloniesLost = (game.state.coloniesLost || 0) + 1; game.persist();
+      import('../ui/hud.js').then(UI => UI.flash(`The colony perished (lost: ${game.state.coloniesLost}) — begin again from a single cell`));
       game.sfx.reject();
-      this.food.length = 0; this.foodBudget = this.foodMax;
-      this.spawnCell(this.cx, this.cy, 0.85);
+      // A real setback: you lose all your progress toward the colony, and the nutrient pool is
+      // NOT handed back full. (A small floor keeps the restart fair, not an instant re-death.)
+      this.food.length = 0;
+      this.foodBudget = Math.max(this.foodBudget, 2);
+      this.spawnCell(this.cx, this.cy, 0.8);
     }
     // success
     if (!game.state.colonyReached && living.length >= this.TARGET) {
@@ -194,6 +199,21 @@ export class CellScene {
       k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
     ctx.stroke();
+    // energy ring — you can SEE at a glance which cells are starving
+    ctx.globalCompositeOperation = 'source-over';
+    const a0 = -Math.PI / 2;
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.strokeStyle = hexA('#ffffff', 0.12);
+    ctx.beginPath(); ctx.arc(x, y, r * 1.28, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = hexA(col, 0.95);
+    ctx.beginPath(); ctx.arc(x, y, r * 1.28, a0, a0 + Math.PI * 2 * Math.max(0.03, c.energy)); ctx.stroke();
+    // danger telegraph — a starving cell flashes red so a death is never a surprise
+    if (!c.dead && c.energy < 0.28) {
+      const p = 0.5 + 0.5 * Math.sin(t * 8);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(255,90,70,${0.35 + p * 0.5})`; ctx.lineWidth = 2; ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.arc(x, y, r * 1.5, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
     ctx.restore();
   }
 }

@@ -58,6 +58,20 @@ export function init(game, environment) {
       if (pt.checked) flash('Predict mode on — guess the outcome before each reaction.');
     });
   }
+  const sb = $('sandboxBtn');
+  if (sb) {
+    renderSandboxBtn();
+    sb.addEventListener('click', () => {
+      if (!G.state.sandboxUnlocked) {
+        if (G.unlockSandbox()) flash('Sandbox unlocked — toggle it on any time.');
+        else { flash(`Need ✦${G.SANDBOX_COST} insight to unlock Sandbox`); return; }
+      } else {
+        G.setSandbox(!G.state.sandbox);
+        flash(G.state.sandbox ? 'Sandbox ON — every stage & ingredient open' : 'Sandbox off — back to the journey');
+      }
+      renderSandboxBtn();
+    });
+  }
   $('resetBtn').addEventListener('click', () => { if (confirm('Reset all progress?')) env.resetSave(); });
   $('howtoBtn').addEventListener('click', () => openHowto(G.sceneName));
   $('howtoOk').addEventListener('click', () => $('howto').classList.add('hidden'));
@@ -89,6 +103,12 @@ function buildNav() {
 
 export function setSceneTitle(t) { $('sceneTitle').textContent = t ? ' · ' + t : ''; renderObjectives(); }
 export function setInsight(n) { $('insightVal').textContent = n; }
+function renderSandboxBtn() {
+  const sb = $('sandboxBtn'); if (!sb || !G) return;
+  if (!G.state.sandboxUnlocked) sb.textContent = `Unlock Sandbox · ✦${G.SANDBOX_COST}`;
+  else sb.textContent = G.state.sandbox ? 'Sandbox mode: ON' : 'Sandbox mode: OFF';
+  sb.classList.toggle('on', !!G.state.sandbox);
+}
 export function setActiveTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   renderObjectives();
@@ -321,20 +341,26 @@ function codexCard(has, glyph, name, fact, glow, base) {
 
 // ---------------- Predict-then-test ----------------
 // Opt-in. Before a reaction resolves, the player guesses the outcome; lab.js compares.
-export function openPredict(game, onPick) {
+export function openPredict(game, actual, onPick) {
   const ov = $('predict'), body = $('predictBody');
   if (!ov || !body) { onPick(null); return; }
   body.innerHTML = '';
-  const known = [];
-  game.state.discoveredItems.forEach(id => { if (ITEMS[id]) known.push(ITEMS[id]); });
-  game.state.asidesFound.forEach(id => { if (ITEMS[id]) known.push(ITEMS[id]); });
+  const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  // multiple choice: the real answer (if any) + a few decoys you've already met, then "Nothing".
+  const knownIds = [...game.state.discoveredItems, ...game.state.asidesFound].filter(id => ITEMS[id]);
+  const decoys = shuffle(knownIds.filter(id => id !== actual)).slice(0, 3);
+  const choiceIds = [];
+  if (actual && actual !== 'nothing' && ITEMS[actual]) choiceIds.push(actual);
+  decoys.forEach(d => { if (!choiceIds.includes(d)) choiceIds.push(d); });
+  shuffle(choiceIds);
   const grid = document.createElement('div'); grid.className = 'predict-grid';
   const pick = (id) => { ov.classList.add('hidden'); onPick(id); };
-  known.forEach(it => {
+  choiceIds.forEach(id => {
+    const it = ITEMS[id];
     const b = document.createElement('button'); b.className = 'predict-chip';
     b.style.setProperty('--c', it.color);
     b.innerHTML = `<span class="pc-abbr">${it.abbr}</span><span class="pc-name">${it.name}</span>`;
-    b.addEventListener('click', () => pick(it.id));
+    b.addEventListener('click', () => pick(id));
     grid.appendChild(b);
   });
   const none = document.createElement('button'); none.className = 'predict-chip none';

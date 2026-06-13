@@ -82,6 +82,25 @@ const game = {
     return true;
   },
   logExperiment() { this.state.experiments = (this.state.experiments || 0) + 1; this.persist(); },
+  // Sandbox: a free-play space where every stage and reagent is open. Bought once with insight.
+  SANDBOX_COST: 40,
+  unlockSandbox() {
+    if (this.state.sandboxUnlocked) return true;
+    if (!this.spend(this.SANDBOX_COST)) return false;
+    this.state.sandboxUnlocked = true; this.persist();
+    return true;
+  },
+  setSandbox(on) {
+    this.state.sandbox = !!on; this.persist();
+    this.checkGates();
+    // rebuild the current scene's tray/palette so freed reagents appear immediately
+    if (this.scene && this.scene.layout) this.scene.layout(this);
+    UI.refreshCodex(this);
+  },
+  // in sandbox you "have" everything; otherwise fall back to real discovery
+  ownsElement(s) { return this.state.sandbox || this.hasElement(s); },
+  ownsMolecule(id) { return this.state.sandbox || this.hasMolecule(id); },
+  ownsItem(id) { return this.state.sandbox || this.hasItem(id); },
   // one-time coaching toast (gated by a saved flag so veterans never see it twice)
   coachOnce(id, opts) {
     if (this.state.coachSeen[id]) return;
@@ -121,6 +140,7 @@ const game = {
   labUnlocked() { return ['CH4', 'NH3', 'H2O'].every(id => this.hasMolecule(id)); },
   cellUnlocked() { return this.hasItem('protocell'); },
   stageUnlocked(id) {
+    if (this.state.sandbox) return true;   // sandbox frees the whole journey
     if (id === 'forge') return true;
     if (id === 'bench') return this.benchUnlocked();
     if (id === 'lab') return this.labUnlocked();

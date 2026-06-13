@@ -28,7 +28,7 @@ export class BenchScene {
     game.gl.setNebula({ colA: [0.10, 0.30, 0.42], colB: [0.30, 0.12, 0.45], intensity: 1.0, focus: [0.5, 0.42] });
   }
   layout(game) {
-    const avail = BOND_ELEMENTS.filter(s => game.hasElement(s));
+    const avail = BOND_ELEMENTS.filter(s => game.ownsElement(s));
     const n = avail.length;
     const gap = Math.min(86, game.W / (n + 1.5));
     const startX = game.W / 2 - (n - 1) * gap / 2;
@@ -227,6 +227,29 @@ export class BenchScene {
         const ux = dx / d, uy = dy / d;
         if (!a.drag) { a.vx -= ux * f * dt; a.vy -= uy * f * dt; }
         if (!b.drag) { b.vx += ux * f * dt; b.vy += uy * f * dt; }
+      }
+    }
+    // VSEPR-ish geometry: rotate an atom's bonded neighbours toward real bond angles.
+    // Oxygen/sulfur with two partners BEND to ~104.5° (their lone pairs push in); carbon's
+    // two partners stay linear (CO₂); three partners splay out. Water finally looks like water.
+    for (const center of as) {
+      const nbrs = [];
+      for (const bd of this.bonds) {
+        if (bd.a === center.id) { const o = this.byId(bd.b); if (o) nbrs.push(o); }
+        else if (bd.b === center.id) { const o = this.byId(bd.a); if (o) nbrs.push(o); }
+      }
+      if (nbrs.length < 2 || nbrs.length > 3) continue;
+      const target = nbrs.length === 2
+        ? ((center.sym === 'O' || center.sym === 'S') ? 104.5 * Math.PI / 180 : Math.PI)
+        : 118 * Math.PI / 180;
+      const items = nbrs.map(o => ({ o, a: Math.atan2(o.y - center.y, o.x - center.x) })).sort((p, q) => p.a - q.a);
+      const pairs = items.length === 2 ? [[0, 1]] : [[0, 1], [1, 2], [2, 0]];
+      for (const [i, j] of pairs) {
+        const cur = items[i], nxt = items[j];
+        let sep = nxt.a - cur.a; if (sep <= 0) sep += Math.PI * 2;
+        const f = (sep - target) * 55 * dt;
+        if (!nxt.o.drag) { nxt.o.vx -= -Math.sin(nxt.a) * f; nxt.o.vy -= Math.cos(nxt.a) * f; }
+        if (!cur.o.drag) { cur.o.vx += -Math.sin(cur.a) * f; cur.o.vy += Math.cos(cur.a) * f; }
       }
     }
     // personality: oxygen is "greedy" — while it still has an open bond it gently lunges

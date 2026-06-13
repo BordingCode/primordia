@@ -12,6 +12,7 @@ export class WorldScene {
     this.lifeSpots = [];
     this.life = 0;             // 0..1 coverage of life
     this.finale = false;
+    this.tapCD = 0;            // tap cooldown so the finale can't be spam-filled
     for (let i = 0; i < 7; i++) this.clouds.push({ a: Math.random() * Math.PI * 2, w: 0.3 + Math.random() * 0.5, sp: 0.04 + Math.random() * 0.08, r: 0.6 + Math.random() * 0.35 });
   }
   enter(game) {
@@ -44,9 +45,11 @@ export class WorldScene {
 
   onDown(x, y, game) {
     if (!this.lifeBegun) return;
+    if (this.tapCD > 0) return;               // rate-limit so life is grown, not spam-filled
     if (Math.hypot(x - this.cx, y - this.cy) < this.R) {
-      this.life = Math.min(1, this.life + 0.04);
-      this.lifeSpots.push(this.randomSpot());
+      this.tapCD = 0.22;
+      this.life = Math.min(1, this.life + 0.014);
+      if (this.lifeSpots.length < 26) this.lifeSpots.push(this.randomSpot());
       game.gl.burst(x, y, 16, { color: [0.5, 1, 0.6], size: 14, speed: 80, life: 0.6, alpha: 0.8 });
       game.sfx.pickup();
     }
@@ -66,8 +69,12 @@ export class WorldScene {
     this._game = game;
     for (let i = this.ripples.length - 1; i >= 0; i--) { this.ripples[i].t += dt; if (this.ripples[i].t > this.ripples[i].max) this.ripples.splice(i, 1); }
     for (const c of this.clouds) c.a += c.sp * dt;
+    if (this.tapCD > 0) this.tapCD -= dt;
     if (this.lifeBegun && this.life < 1) {
-      this.life = Math.min(1, this.life + dt * 0.018);
+      // a richer atmosphere (more of the molecules you discovered) greens the world faster —
+      // your Lab work pays off here, not just on the goal list.
+      const boost = 0.006 + 0.004 * this.atmosphereLevel(game);
+      this.life = Math.min(1, this.life + dt * boost);
       for (const s of this.lifeSpots) s.s = Math.min(0.5, s.s + dt * 0.02 * (0.5 + this.life));
       if (Math.random() < this.life * dt * 2 && this.lifeSpots.length < 26) this.lifeSpots.push(this.randomSpot());
     }
@@ -180,7 +187,7 @@ export class WorldScene {
   }
   subLine(game) {
     if (this.finale) return 'From a single atom of hydrogen — you grew a living world.';
-    if (this.lifeBegun) return `${Math.round(this.life * 100)}% alive · tap the world to spread life`;
+    if (this.lifeBegun) return `${Math.round(this.life * 100)}% alive · a richer atmosphere greens it faster · tap to help`;
     const done = game.state.discoveredMolecules.length;
     if (done >= MOLECULES.length) return 'Now brew the building blocks of life in the Lab';
     return `${done} / ${MOLECULES.length} molecules seeded into the world`;

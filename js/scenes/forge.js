@@ -25,7 +25,7 @@ export class ForgeScene {
     this.cx = game.W / 2;
     this.cy = game.H * 0.44;
     this.coreR = Math.min(game.W, game.H) * 0.24;
-    const avail = FUSION_INPUTS.filter(s => game.hasElement(s));
+    const avail = FUSION_INPUTS.filter(s => game.ownsElement(s));
     const n = avail.length;
     const gap = Math.min(96, game.W / (n + 1));
     const startX = game.W / 2 - (n - 1) * gap / 2;
@@ -51,6 +51,15 @@ export class ForgeScene {
   }
 
   onDown(x, y, game) {
+    // Tap the glowing HEART of the core to stoke a charging fusion — active agency, not just
+    // waiting. (Checked first so it isn't swallowed by grabbing a nucleus; only the inner core,
+    // so you can still drag nuclei around the edges.)
+    if (this.chargeSet && Math.hypot(x - this.cx, y - this.cy) < this.coreR * 0.55) {
+      this.charge = Math.min(1, this.charge + 0.34);
+      game.sfx.pickup();
+      game.gl.burst(this.cx, this.cy, 18, { color: rgb01(el(this.chargeSet.out).glow), size: 18, speed: 120, life: 0.4, alpha: 0.8 });
+      return;
+    }
     const n = this.hitNucleus(x, y);
     if (n) { this.drag = n; n.drag = true; game.sfx.pickup(); return; }
     const chip = this.hitChip(x, y);
@@ -59,6 +68,7 @@ export class ForgeScene {
       this.nuclei.push(nn); this.drag = nn; nn.drag = true;
       game.sfx.pickup();
       this.forgeCoach(game, chip.sym);
+      return;
     }
   }
 

@@ -11,6 +11,9 @@ const DEFAULT = {
   hintsUsed: {},                 // id -> tier of hint revealed
   predictMode: false,            // opt-in: guess the outcome before each reaction
   coachSeen: {},                 // one-time coaching toasts already shown
+  sandboxUnlocked: false,        // bought with insight — frees every stage & reagent
+  sandbox: false,                // sandbox mode currently on
+  coloniesLost: 0,               // protocell colonies that perished (a real setback count)
   scene: 'forge',
   introSeen: false,
   howtoSeen: {},                 // sceneId -> true once the "how it works" guide was shown

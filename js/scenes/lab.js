@@ -66,9 +66,9 @@ export class LabScene {
 
   reagentIds(game) {
     const out = [];
-    MOLECULES.forEach(m => { if (game.hasMolecule(m.id)) out.push(m.id); });
-    if (game.hasElement('P')) out.push('P');
-    Object.values(ITEMS).forEach(it => { if (it.kind !== 'cell' && game.hasItem(it.id)) out.push(it.id); });
+    MOLECULES.forEach(m => { if (game.ownsMolecule(m.id)) out.push(m.id); });
+    if (game.ownsElement('P')) out.push('P');
+    Object.values(ITEMS).forEach(it => { if (it.kind !== 'cell' && it.kind !== 'aside' && game.ownsItem(it.id)) out.push(it.id); });
     return out;
   }
 
@@ -112,7 +112,9 @@ export class LabScene {
     if (Object.keys(counts).length === 0) { this.toast(game, 'fail', 'Empty reactor', 'Tap reagents below to load them.'); game.sfx.reject(); return; }
     // Predict-then-test (opt-in): guess the outcome first, then see if you were right.
     if (game.state.predictMode) {
-      import('../ui/hud.js').then(UI => UI.openPredict(game, (guess) => this._doReact(game, guess)));
+      const res = synthMatch(counts, this.energy);
+      const actual = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
+      import('../ui/hud.js').then(UI => UI.openPredict(game, actual, (guess) => this._doReact(game, guess)));
     } else {
       this._doReact(game, null);
     }

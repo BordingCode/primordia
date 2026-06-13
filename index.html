@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=5" />
+<link rel="stylesheet" href="css/style.css?v=6" />
 </head>
 <body>
 <div id="stage">
@@ -65,6 +65,8 @@
       <div class="sheet-head"><h2>Menu</h2><button class="close" data-close>✕</button></div>
       <label class="row"><span>Sound</span><input type="checkbox" id="soundToggle" checked /></label>
       <label class="row"><span>Predict before reacting<br/><small class="dim">Guess the outcome, then see if you were right</small></span><input type="checkbox" id="predictToggle" /></label>
+      <button class="ghost" id="sandboxBtn">Unlock Sandbox</button>
+      <p class="sandbox-note dim">Sandbox opens every stage and ingredient for free play.</p>
       <button class="danger" id="resetBtn">Reset all progress</button>
       <p class="credit">Primordia · a chemistry-of-life journey<br/>Every recipe is real science.</p>
     </div>
@@ -109,7 +111,7 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=9"></script>
+<script type="module" src="js/main.js?v=10"></script>
 <script>
   // --- resilience layer (plain script, runs even if the game module fails to boot) ---
   (function () {
