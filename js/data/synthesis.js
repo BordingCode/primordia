@@ -50,36 +50,71 @@ export const ITEMS = {
   protocell:    { id: 'protocell', name: 'Protocell', abbr: '⬭', color: '#a8ffe0', kind: 'cell',
                   riddle: 'A bubble holding a self-copying thread and a worker or two — not quite alive, not quite not.',
                   fact: 'A protocell — a membrane enclosing RNA and proteins. The very threshold of life.' },
+
+  // --- CURIOSITIES: real reactions that aren't on the main path to life. ---
+  // You only find these by experimenting. They reward poking around, not following the recipe.
+  formamide:    { id: 'formamide', name: 'Formamide', abbr: 'CH₃NO', formula: 'CH₃NO', color: '#bfe0ff', kind: 'aside',
+                  fact: 'Formamide — hydrogen cyanide reacting with water. Warm it and it can go on to make bases and amino acids; some chemists think it, not water, was life’s first solvent.' },
+  urea:         { id: 'urea', name: 'Urea', abbr: 'Urea', formula: 'CH₄N₂O', color: '#cfeacb', kind: 'aside',
+                  fact: 'Urea — built from ammonia and carbon dioxide. In 1828 Wöhler made it from plain chemicals, the first proof that the molecules of life follow ordinary chemistry.' },
+  water_burn:   { id: 'water_burn', name: 'Water (by burning)', abbr: 'H₂O', formula: 'H₂O', color: '#9fe6ff', kind: 'aside',
+                  fact: 'Water — a spark through hydrogen and oxygen burns them straight into it. The same water you already met on the Bench, made a violent second way.' },
 };
 
 // reagents are multisets keyed by molecule id (recipes.js) OR item id (above) OR element symbol.
 export const SYNTH = [
   { reagents: { CH4: 1, NH3: 1 },            energy: 'lightning', product: 'HCN',
-    note: 'Lightning splits methane and ammonia and they recombine into hydrogen cyanide.' },
+    note: 'Lightning splits methane and ammonia and they recombine into hydrogen cyanide.',
+    hint: 'Methane and ammonia are calm, stable gases — only a violent spark of lightning rips them apart so the pieces can recombine.' },
   { reagents: { CH4: 1, NH3: 1, H2O: 1 },    energy: 'lightning', product: 'glycine',
-    note: 'The Miller–Urey reaction: a spark through the early atmosphere yields amino acids.' },
+    note: 'The Miller–Urey reaction: a spark through the early atmosphere yields amino acids.',
+    hint: 'This is the early atmosphere in a flask. It takes a bolt of lightning through it to forge an amino acid.' },
   { reagents: { CH4: 1, NH3: 1, CO2: 1 },    energy: 'lightning', product: 'alanine',
-    note: 'Another Miller–Urey product — a second amino acid.' },
+    note: 'Another Miller–Urey product — a second amino acid.',
+    hint: 'Like its cousin glycine, this needs a lightning spark through the primordial air.' },
   { reagents: { CO2: 1, H2O: 1 },            energy: 'uv',        product: 'formaldehyde',
-    note: 'Ultraviolet light drives CO₂ and water to formaldehyde.' },
+    note: 'Ultraviolet light drives CO₂ and water to formaldehyde.',
+    hint: 'It takes the energy of ultraviolet sunlight to split CO₂ and water and rebuild them.' },
   { reagents: { HCN: 5 },                    energy: 'heat',      product: 'adenine',
-    note: 'Five hydrogen cyanides condense into adenine — a real prebiotic route (Oró, 1961).' },
+    note: 'Five hydrogen cyanides condense into adenine — a real prebiotic route (Oró, 1961).',
+    hint: 'Steady heat is what coaxes these five molecules to condense together.' },
   { reagents: { formaldehyde: 5 },           energy: 'heat',      product: 'ribose',
-    note: 'The formose reaction: formaldehyde oligomerises into sugars including ribose.' },
+    note: 'The formose reaction: formaldehyde oligomerises into sugars including ribose.',
+    hint: 'Warmth (heat) is what links the small pieces into a sugar — the formose reaction.' },
   { reagents: { CO2: 1, H2: 1 },             energy: 'heat',      product: 'fatty_acid',
-    note: 'At hydrothermal vents, CO₂ and hydrogen build long fatty-acid chains.' },
+    note: 'At hydrothermal vents, CO₂ and hydrogen build long fatty-acid chains.',
+    hint: 'These chains are welded together in the heat of a deep-sea vent.' },
   { reagents: { P: 1, O2: 1 },               energy: 'heat',      product: 'phosphate',
-    note: 'Phosphorus oxidises into phosphate, life’s energy and information currency.' },
+    note: 'Phosphorus oxidises into phosphate, life’s energy and information currency.',
+    hint: 'Phosphorus only takes on its oxygen coat under heat.' },
   { reagents: { glycine: 2, alanine: 1 },    energy: 'heat',      product: 'protein',
-    note: 'Heat on a mineral surface links amino acids by peptide bonds, shedding water.' },
+    note: 'Heat on a mineral surface links amino acids by peptide bonds, shedding water.',
+    hint: 'Linking amino acids squeezes out a water at each knot — that needs heat to drive it.' },
   { reagents: { ribose: 1, adenine: 1, phosphate: 1 }, energy: 'none', product: 'nucleotide',
-    note: 'Sugar, base and phosphate join into a single nucleotide.' },
+    note: 'Sugar, base and phosphate join into a single nucleotide.',
+    hint: 'These three pieces simply clasp together — no energy required. Set the energy to “none”.' },
   { reagents: { nucleotide: 3 },             energy: 'heat',      product: 'rna',
-    note: 'Nucleotides polymerise into a strand of RNA that can copy itself.' },
+    note: 'Nucleotides polymerise into a strand of RNA that can copy itself.',
+    hint: 'Stringing the letters into a chain takes a little heat.' },
   { reagents: { fatty_acid: 3, H2O: 1 },     energy: 'none',      product: 'membrane',
-    note: 'In water, fatty acids spontaneously self-assemble into a membrane.' },
+    note: 'In water, fatty acids spontaneously self-assemble into a membrane.',
+    hint: 'Lipids wrap themselves into a shell all on their own — no energy needed. Set the energy to “none”.' },
   { reagents: { membrane: 1, rna: 1, protein: 1 }, energy: 'none', product: 'protocell',
-    note: 'A membrane wraps RNA and proteins: the first protocell.' },
+    note: 'A membrane wraps RNA and proteins: the first protocell.',
+    hint: 'The pieces of a cell come together on their own — set the energy to “none”.' },
+];
+
+// CURIOSITIES — real reactions OFF the main path. Found only by experimenting; never required.
+export const ASIDES = [
+  { reagents: { HCN: 1, H2O: 1 },   energy: 'heat',      product: 'formamide',
+    note: 'Hydrogen cyanide reacts with water to give formamide.',
+    hint: 'These two will react with a little heat — try it.' },
+  { reagents: { NH3: 2, CO2: 1 },   energy: 'heat',      product: 'urea',
+    note: 'Ammonia and carbon dioxide combine into urea.',
+    hint: 'Warm these together and something forms.' },
+  { reagents: { H2: 2, O2: 1 },     energy: 'lightning', product: 'water_burn',
+    note: 'A spark burns hydrogen in oxygen straight into water.',
+    hint: 'A spark would set these two off.' },
 ];
 
 export function item(id) { return ITEMS[id] || null; }
@@ -95,20 +130,35 @@ function isSubset(part, whole) {
          Object.keys(part).length > 0;
 }
 
-// Returns { status, recipe?, product? }
-// status: 'ok' | 'wrong-energy' | 'incomplete' | 'none' | 'empty'
+// A teaching line for combinations that form nothing — so "no reaction" still TEACHES.
+function classifyNull(counts, energyId) {
+  const ids = Object.keys(counts);
+  const total = ids.reduce((s, k) => s + counts[k], 0);
+  if (total === 1) return 'A single ingredient has nothing to react with. Load another into the ring.';
+  if (energyId === 'none') return 'With no energy, stable molecules just drift past one another. Try adding a spark, sunlight, or heat.';
+  return 'Nothing known forms from these. Real chemistry is fussy — try other ingredients, or a different energy.';
+}
+
+// Returns { status, recipe?, product?, hint? }
+// status: 'ok' | 'aside' | 'wrong-energy' | 'incomplete' | 'none' | 'empty'
 export function synthMatch(counts, energyId) {
   if (!counts || Object.keys(counts).length === 0) return { status: 'empty' };
   const exact = SYNTH.find(r => eq(r.reagents, counts));
   if (exact) {
     if (exact.energy === energyId) return { status: 'ok', recipe: exact, product: exact.product };
-    return { status: 'wrong-energy', recipe: exact };
+    return { status: 'wrong-energy', recipe: exact, hint: exact.hint };
   }
-  // partial: the player is on the way to some recipe
-  const partial = SYNTH.find(r => isSubset(counts, r.reagents) && !eq(r.reagents, counts));
+  const aside = ASIDES.find(r => eq(r.reagents, counts));
+  if (aside) {
+    if (aside.energy === energyId) return { status: 'aside', recipe: aside, product: aside.product };
+    return { status: 'wrong-energy', recipe: aside, hint: aside.hint };
+  }
+  // partial: the player is on the way to some recipe (main path or curiosity)
+  const partial = [...SYNTH, ...ASIDES].find(r => isSubset(counts, r.reagents) && !eq(r.reagents, counts));
   if (partial) return { status: 'incomplete' };
-  return { status: 'none' };
+  return { status: 'none', hint: classifyNull(counts, energyId) };
 }
 
 // every product id, for codex / objective listing in synthesis order
 export const SYNTH_PRODUCTS = SYNTH.map(r => r.product);
+export const ASIDE_PRODUCTS = ASIDES.map(r => r.product);

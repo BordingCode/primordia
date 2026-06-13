@@ -9,7 +9,7 @@ export const LEARN = {
   N:  'Nitrogen is forged in the CNO cycle, where carbon helps a star burn hydrogen. Try bringing carbon together with the lightest element of all.',
   O:  'Oxygen is born when carbon swallows a helium nucleus. You’ll need both of them in the core at once.',
   P:  'Phosphorus is forged in massive stars when oxygen nuclei are crushed into one another. Bring oxygen together with oxygen.',
-  S:  'Sulfur sits higher on the “alpha ladder” — heavier nuclei capturing helium one after another. Try feeding helium to oxygen.',
+  S:  'Sulfur is built up one proton at a time in the hearts of massive stars. Forge phosphorus first, then feed it a single hydrogen nucleus.',
 
   // ---- Bench: reason it out from valence ----
   H2:  'The simplest molecule there is: two atoms that each want a single bond, quietly satisfying each other.',

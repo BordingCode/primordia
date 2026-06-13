@@ -1,7 +1,7 @@
 // hud.js — all DOM UI: dynamic nav, objectives, codex, toasts, hints, intro, menu.
 import { ELEMENTS, ELEMENT_LIST, el } from '../data/elements.js';
 import { MOLECULES, FUSION } from '../data/recipes.js';
-import { ITEMS, SYNTH, ENERGIES, item as synthItem, energy as energyDef } from '../data/synthesis.js';
+import { ITEMS, SYNTH, ASIDES, ENERGIES, item as synthItem, energy as energyDef } from '../data/synthesis.js';
 import { LEARN } from '../data/learn.js';
 import { HOWTO } from '../data/howto.js';
 import { unlock as audioUnlock } from '../engine/audio.js';
@@ -50,6 +50,14 @@ export function init(game, environment) {
   });
   const st = $('soundToggle'); st.checked = env.audioIsEnabled();
   st.addEventListener('change', () => env.setAudioEnabled(st.checked));
+  const pt = $('predictToggle');
+  if (pt) {
+    pt.checked = !!G.state.predictMode;
+    pt.addEventListener('change', () => {
+      G.state.predictMode = pt.checked; G.persist();
+      if (pt.checked) flash('Predict mode on — guess the outcome before each reaction.');
+    });
+  }
   $('resetBtn').addEventListener('click', () => { if (confirm('Reset all progress?')) env.resetSave(); });
   $('howtoBtn').addEventListener('click', () => openHowto(G.sceneName));
   $('howtoOk').addEventListener('click', () => $('howto').classList.add('hidden'));
@@ -286,8 +294,19 @@ function renderCodexBody(which) {
       const has = G.hasMolecule(m.id);
       body.appendChild(codexCard(has, '⬡', has ? m.name + ' · ' + fsub(m.formula) : 'Undiscovered', has ? m.fact : '“' + m.riddle + '”', '#3ff0c8', '#3ff0c8'));
     });
+  } else if (which === 'curiosities') {
+    const found = G.state.asidesFound.length, total = ASIDES.length, exp = G.state.experiments || 0;
+    const meter = document.createElement('p'); meter.className = 'codex-meter';
+    meter.innerHTML = `<b>${exp}</b> ${exp === 1 ? 'experiment' : 'experiments'} run · <b>${found}/${total}</b> curiosities found.<br/>
+      <span class="dim">Real reactions off the path to life — found only by experimenting in the Lab.</span>`;
+    body.appendChild(meter);
+    ASIDES.forEach(r => {
+      const it = ITEMS[r.product], has = G.hasAside(r.product);
+      body.appendChild(codexCard(has, has ? (it.abbr.length <= 3 ? it.abbr : '✦') : '?', has ? it.name + (it.formula ? ' · ' + it.formula : '') : 'Undiscovered curiosity', has ? it.fact : 'Stumble onto it by combining things the recipes never asked for.', it.color, it.color));
+    });
   } else {
     Object.values(ITEMS).forEach(it => {
+      if (it.kind === 'aside') return;            // curiosities live in their own tab
       const has = G.hasItem(it.id);
       body.appendChild(codexCard(has, has ? (it.abbr.length <= 3 ? it.abbr : '✦') : '?', has ? it.name + (it.formula ? ' · ' + it.formula : '') : 'Undiscovered', has ? it.fact : '“' + it.riddle + '”', it.color, it.color));
     });
@@ -298,6 +317,36 @@ function codexCard(has, glyph, name, fact, glow, base) {
   c.innerHTML = `<div class="cc-orb" style="--c:${glow};--b:${base}">${glyph}</div>
     <div class="cc-name">${name}</div><div class="cc-fact">${fact}</div>`;
   return c;
+}
+
+// ---------------- Predict-then-test ----------------
+// Opt-in. Before a reaction resolves, the player guesses the outcome; lab.js compares.
+export function openPredict(game, onPick) {
+  const ov = $('predict'), body = $('predictBody');
+  if (!ov || !body) { onPick(null); return; }
+  body.innerHTML = '';
+  const known = [];
+  game.state.discoveredItems.forEach(id => { if (ITEMS[id]) known.push(ITEMS[id]); });
+  game.state.asidesFound.forEach(id => { if (ITEMS[id]) known.push(ITEMS[id]); });
+  const grid = document.createElement('div'); grid.className = 'predict-grid';
+  const pick = (id) => { ov.classList.add('hidden'); onPick(id); };
+  known.forEach(it => {
+    const b = document.createElement('button'); b.className = 'predict-chip';
+    b.style.setProperty('--c', it.color);
+    b.innerHTML = `<span class="pc-abbr">${it.abbr}</span><span class="pc-name">${it.name}</span>`;
+    b.addEventListener('click', () => pick(it.id));
+    grid.appendChild(b);
+  });
+  const none = document.createElement('button'); none.className = 'predict-chip none';
+  none.innerHTML = `<span class="pc-abbr">∅</span><span class="pc-name">Nothing</span>`;
+  none.addEventListener('click', () => pick('nothing'));
+  grid.appendChild(none);
+  body.appendChild(grid);
+  const skip = document.createElement('button'); skip.className = 'predict-skip';
+  skip.textContent = 'Not sure — just react';
+  skip.addEventListener('click', () => pick(null));
+  body.appendChild(skip);
+  ov.classList.remove('hidden');
 }
 
 // ---------------- Intro ----------------

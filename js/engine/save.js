@@ -5,8 +5,12 @@ const DEFAULT = {
   discoveredElements: ['H'],     // you always start with hydrogen
   discoveredMolecules: [],
   discoveredItems: [],           // building blocks, polymers, protocell
+  asidesFound: [],               // off-path "curiosities" found by experimenting
+  experiments: 0,                // count of reactions the player has run (curiosity meter)
   insight: 0,
   hintsUsed: {},                 // id -> tier of hint revealed
+  predictMode: false,            // opt-in: guess the outcome before each reaction
+  coachSeen: {},                 // one-time coaching toasts already shown
   scene: 'forge',
   introSeen: false,
   howtoSeen: {},                 // sceneId -> true once the "how it works" guide was shown

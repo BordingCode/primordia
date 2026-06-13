@@ -32,6 +32,9 @@ export class LabScene {
     this.title = game.hasItem('membrane') || game.hasItem('rna') || game.hasItem('protein') ? 'Assembly Lab' : 'Primordial Soup';
     game.gl.setNebula({ colA: [0.10, 0.22, 0.40], colB: [0.34, 0.16, 0.42], intensity: 1.0, focus: [0.5, 0.40] });
     this.layout(game);
+    game.coachOnce('lab_experiment', { kind: 'hint',
+      title: 'Experiment freely',
+      sub: 'You don’t have to follow the goals — load anything, pick any energy, and react. Some real reactions are hidden off the path (see the Codex).' });
   }
 
   layout(game) {
@@ -106,28 +109,53 @@ export class LabScene {
 
   react(game) {
     const counts = this.counts();
+    if (Object.keys(counts).length === 0) { this.toast(game, 'fail', 'Empty reactor', 'Tap reagents below to load them.'); game.sfx.reject(); return; }
+    // Predict-then-test (opt-in): guess the outcome first, then see if you were right.
+    if (game.state.predictMode) {
+      import('../ui/hud.js').then(UI => UI.openPredict(game, (guess) => this._doReact(game, guess)));
+    } else {
+      this._doReact(game, null);
+    }
+  }
+
+  // Resolve a reaction. `prediction` is a product id, 'nothing', or null (predict mode off).
+  _doReact(game, prediction) {
+    const counts = this.counts();
+    game.logExperiment();
     const res = synthMatch(counts, this.energy);
-    if (res.status === 'empty') { this.toast(game, 'fail', 'Empty reactor', 'Tap reagents below to load them.'); game.sfx.reject(); return; }
-    if (res.status === 'ok') {
+    const made = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
+    let pre = '';
+    if (prediction != null) {
+      if (prediction === made) pre = '✓ You called it! ';
+      else {
+        const g = prediction === 'nothing' ? 'nothing' : (synthItem(prediction)?.name || prediction);
+        pre = `✗ You guessed ${g}. `;
+      }
+    }
+
+    if (res.status === 'ok' || res.status === 'aside') {
       const it = synthItem(res.product);
-      const isNew = !game.hasItem(res.product);
+      const aside = res.status === 'aside';
+      const isNew = aside ? !game.hasAside(res.product) : !game.hasItem(res.product);
       this.reactPulse = 1;
       game.sfx.discover();
       game.celebrate(this.cx, this.cy, it.color);
-      game.gl.burst(this.cx, this.cy, 70, { color: rgb01(energyDef(this.energy).color), speed: 240, size: 28, life: 1.0, alpha: 0.9 });
-      game.discoverItem(res.product);
-      this.toast(game, 'item', isNew ? `Synthesised ${it.name}` : it.name, it.formula ? it.name + ' · ' + it.formula : it.name, it.fact, res.product);
+      game.gl.burst(this.cx, this.cy, aside ? 50 : 70, { color: rgb01(energyDef(this.energy).color), speed: 240, size: 28, life: 1.0, alpha: 0.9 });
+      if (aside) game.discoverAside(res.product); else game.discoverItem(res.product);
+      const title = aside ? (isNew ? `Curiosity — ${it.name}` : it.name) : (isNew ? `Synthesised ${it.name}` : it.name);
+      const sub = pre + (it.formula ? it.name + ' · ' + it.formula : it.name);
+      this.toast(game, 'item', title, sub, it.fact, res.product);
       this.slots.forEach(s => s.id = null);
       this.layout(game);
       import('../ui/hud.js').then(UI => UI.refreshGoals(game));
-      // protocell made → nudge toward the Cell stage
+      if (aside && isNew) import('../ui/hud.js').then(UI => UI.flash('A curiosity! Off the path of life — see the Codex.'));
       if (res.product === 'protocell') import('../ui/hud.js').then(UI => UI.flash('A protocell! Find it in the Cell stage →'));
       return;
     }
     game.sfx.reject(); this.reactPulse = 0.4;
-    if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', `These could react — but not under ${energyDef(this.energy).name.toLowerCase()}. Try a different energy.`);
-    else if (res.status === 'incomplete') this.toast(game, 'fail', 'Something is missing', 'The right reagents are here, but not enough of them. Add another.');
-    else this.toast(game, 'fail', 'No reaction', 'These reagents don’t combine. Rethink the recipe.');
+    if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + (res.hint || `These could react — but not under ${energyDef(this.energy).name.toLowerCase()}. Try a different energy.`));
+    else if (res.status === 'incomplete') this.toast(game, 'fail', 'Something is missing', pre + 'The right reagents are here, but not enough of them. Add another.');
+    else this.toast(game, 'fail', 'No reaction', pre + (res.hint || 'These reagents don’t combine. Rethink the recipe.'));
   }
 
   toast(game, kind, title, sub, fact, item) {

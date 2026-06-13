@@ -74,6 +74,21 @@ const game = {
     return true;
   },
 
+  hasAside(id) { return this.state.asidesFound.includes(id); },
+  discoverAside(id) {
+    if (this.hasAside(id)) return false;
+    this.state.asidesFound.push(id);
+    this.award(6); this.persist(); UI.refreshCodex(this);
+    return true;
+  },
+  logExperiment() { this.state.experiments = (this.state.experiments || 0) + 1; this.persist(); },
+  // one-time coaching toast (gated by a saved flag so veterans never see it twice)
+  coachOnce(id, opts) {
+    if (this.state.coachSeen[id]) return;
+    this.state.coachSeen[id] = true; this.persist();
+    UI.toast(this, opts);
+  },
+
   award(n) { this.state.insight += n; UI.setInsight(this.state.insight); this.persist(); },
   spend(n) { if (this.state.insight < n) return false; this.state.insight -= n; UI.setInsight(this.state.insight); this.persist(); return true; },
   persist() { Save.save(this.state); },

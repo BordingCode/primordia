@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css?v=4" />
+<link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
 <div id="stage">
@@ -53,6 +53,7 @@
         <button class="ctab active" data-ctab="elements">Elements</button>
         <button class="ctab" data-ctab="molecules">Molecules</button>
         <button class="ctab" data-ctab="items">Life</button>
+        <button class="ctab" data-ctab="curiosities">Curiosities</button>
       </div>
       <div id="codexBody"></div>
     </div>
@@ -63,6 +64,7 @@
     <div class="sheet small">
       <div class="sheet-head"><h2>Menu</h2><button class="close" data-close>✕</button></div>
       <label class="row"><span>Sound</span><input type="checkbox" id="soundToggle" checked /></label>
+      <label class="row"><span>Predict before reacting<br/><small class="dim">Guess the outcome, then see if you were right</small></span><input type="checkbox" id="predictToggle" /></label>
       <button class="danger" id="resetBtn">Reset all progress</button>
       <p class="credit">Primordia · a chemistry-of-life journey<br/>Every recipe is real science.</p>
     </div>
@@ -85,6 +87,15 @@
     </div>
   </div>
 
+  <!-- predict-then-test modal -->
+  <div id="predict" class="overlay hidden">
+    <div class="sheet small">
+      <div class="sheet-head"><h2>What will form?</h2><button class="close" data-close>✕</button></div>
+      <p class="predict-lede">Make a guess before you react — a wrong guess teaches the most.</p>
+      <div id="predictBody"></div>
+    </div>
+  </div>
+
   <!-- intro -->
   <div id="intro" class="overlay">
     <div class="intro-inner">
@@ -98,7 +109,7 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=6"></script>
+<script type="module" src="js/main.js?v=7"></script>
 <script>
   // --- resilience layer (plain script, runs even if the game module fails to boot) ---
   (function () {
