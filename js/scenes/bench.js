@@ -70,7 +70,20 @@ export class BenchScene {
     if (chip) {
       const na = this.spawnAtom(chip.sym, x, y - 4);
       this.atoms.push(na); this.drag = na; na.drag = true; game.sfx.pickup();
+      this.feltCoach(game, chip.sym);
     }
+  }
+
+  // First time you pick up each element, meet its character — taught at the moment you hold it.
+  feltCoach(game, sym) {
+    const lines = {
+      H: 'Hydrogen has just one bond to give — life’s universal little connector.',
+      C: 'Carbon reaches for FOUR bonds at once — that’s why it can build the long chains and rings that all life is made of.',
+      N: 'Nitrogen wants three bonds. Two nitrogens can only satisfy each other by sharing a rare, super-strong triple bond.',
+      O: 'Oxygen is greedy — watch it lunge at partners, pulling them in until both of its two bonds are filled.',
+      S: 'Sulfur is oxygen’s heavier cousin and behaves like it here — it too wants two bonds.',
+    };
+    if (lines[sym]) game.coachOnce('felt_' + sym, { kind: 'hint', title: el(sym).name, sub: lines[sym] });
   }
   onMove(x, y) { if (this.drag) { this.drag.x = x; this.drag.y = y; this.drag.vx = 0; this.drag.vy = 0; } }
   onUp() { if (this.drag) { this.drag.drag = false; this.drag = null; } }
@@ -134,10 +147,12 @@ export class BenchScene {
   }
 
   checkStable(game) {
+    let satisfiedCluster = false;
     for (const comp of this.components()) {
       if (comp.length < 2) continue;
       const allSatisfied = comp.every(a => this.freeSlots(a) === 0 && this.valence(a.sym) > 0);
       if (!allSatisfied) continue;
+      satisfiedCluster = true;
       const counts = {};
       comp.forEach(a => counts[a.sym] = (counts[a.sym] || 0) + 1);
       const mol = moleculeByFormula(counts);
@@ -145,7 +160,24 @@ export class BenchScene {
       if (this.completed.has(key)) continue;
       this.completed.add(key);
       if (mol) this.onStableMolecule(mol, comp, game);
+      else this.onStableUnlisted(comp, game);
     }
+    // Free-build teaching: a finished molecule sitting next to a still-hungry leftover atom
+    // (the "fifth hydrogen on carbon" moment) — every atom takes a fixed number of bonds.
+    if (satisfiedCluster && this.atoms.some(a => this.freeSlots(a) > 0)) {
+      game.coachOnce('felt_hungry', { kind: 'hint', title: 'Still hungry',
+        sub: 'See the atom still glowing? It wants a bond, but every partner nearby is already full. Each atom takes a fixed number of bonds — no more, no less.' });
+    }
+  }
+
+  // A fully-bonded cluster that isn't a molecule life uses — reward the experiment, teach stability.
+  onStableUnlisted(comp, game) {
+    const cx = comp.reduce((s, a) => s + a.x, 0) / comp.length;
+    const cy = comp.reduce((s, a) => s + a.y, 0) / comp.length;
+    game.gl.burst(cx, cy, 14, { color: rgb01('#bfe0ff'), speed: 90, size: 14, life: 0.5, alpha: 0.6 });
+    game.sfx.bond();
+    game.coachOnce('felt_stable', { kind: 'hint', title: 'A stable structure',
+      sub: 'Every bond is filled, so it holds together — even though it isn’t a molecule life needs. That’s all stability asks: no atom left hungry.' });
   }
 
   onStableMolecule(mol, comp, game) {
@@ -197,6 +229,21 @@ export class BenchScene {
         if (!b.drag) { b.vx += ux * f * dt; b.vy += uy * f * dt; }
       }
     }
+    // personality: oxygen is "greedy" — while it still has an open bond it gently lunges
+    // toward the nearest atom that could satisfy it. You SEE it reach for partners.
+    for (const a of as) {
+      if (a.drag || a.sym !== 'O' || this.freeSlots(a) <= 0) continue;
+      let best = null, bestD = 1e9;
+      for (const b of as) {
+        if (b === a || this.bonded(a, b) || this.freeSlots(b) <= 0) continue;
+        const d = Math.hypot(b.x - a.x, b.y - a.y);
+        if (d < bestD) { bestD = d; best = b; }
+      }
+      if (best && bestD < 240 && bestD > a.r + best.r + 10) {
+        const ux = (best.x - a.x) / bestD, uy = (best.y - a.y) / bestD;
+        a.vx += ux * 70 * dt; a.vy += uy * 70 * dt;
+      }
+    }
     // integrate
     for (const a of as) {
       a.pulse = a.pulse * 0.9 + (this.freeSlots(a) > 0 ? 0.5 + 0.5 * Math.sin(game.time * 4 + a.id) : 0) * 0.1;
@@ -228,15 +275,16 @@ export class BenchScene {
     }
     // atoms
     for (const a of this.atoms) {
-      drawAtom(ctx, a.x, a.y, a.sym, { hungry: this.freeSlots(a) > 0, pulse: Math.abs(a.pulse) });
+      const v = this.valence(a.sym), fs = this.freeSlots(a);
+      drawAtom(ctx, a.x, a.y, a.sym, { hungry: fs > 0, pulse: Math.abs(a.pulse), slots: v, filled: v - fs, time: game.time });
     }
     // tray
-    for (const c of this.chips) this.drawChip(ctx, c);
+    for (const c of this.chips) this.drawChip(ctx, c, game.time);
     // clear button
     this.drawClear(ctx);
   }
 
-  drawChip(ctx, c) {
+  drawChip(ctx, c, time = 0) {
     ctx.save();
     const e = el(c.sym);
     ctx.globalCompositeOperation = 'lighter';
@@ -244,7 +292,8 @@ export class BenchScene {
     g.addColorStop(0, hexA(e.glow, 0.28)); g.addColorStop(1, hexA(e.glow, 0));
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.7, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    drawAtom(ctx, c.x, c.y, c.sym, { r: c.r });
+    // tray atoms show all their arms open, so you can read each element's "appetite" at rest
+    drawAtom(ctx, c.x, c.y, c.sym, { r: c.r, slots: el(c.sym).valence, filled: 0, time });
     ctx.fillStyle = 'rgba(200,220,255,0.55)';
     ctx.font = '500 10px "Outfit", system-ui, sans-serif';
     ctx.textAlign = 'center';

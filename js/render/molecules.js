@@ -5,7 +5,9 @@
 import { el } from '../data/elements.js';
 
 // Draw a single shaded atom sphere with bioluminescent rim glow.
-export function drawAtom(ctx, x, y, sym, { r = null, hungry = false, scale = 1, pulse = 0 } = {}) {
+// slots = total valence (bond-points to draw); filled = how many are already bonded.
+// Open slots render as reaching, pulsing "arms" so an atom's appetite is something you SEE.
+export function drawAtom(ctx, x, y, sym, { r = null, hungry = false, scale = 1, pulse = 0, slots = null, filled = 0, time = 0 } = {}) {
   const e = el(sym);
   const radius = (r || e.r) * scale;
 
@@ -44,8 +46,32 @@ export function drawAtom(ctx, x, y, sym, { r = null, hungry = false, scale = 1, 
   ctx.fillStyle = sg;
   ctx.beginPath(); ctx.arc(lx, ly, radius * 0.6, 0, Math.PI * 2); ctx.fill();
 
-  // hungry indicator: dashed pulsing ring
-  if (hungry) {
+  // valence "arms" — one spoke per bond the atom wants. Filled = calm nub; open = reaching,
+  // pulsing arm. This makes "carbon wants four / oxygen wants two" something you SEE.
+  if (slots != null && slots > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const r0 = radius * 1.02;
+    for (let i = 0; i < slots; i++) {
+      const ang = -Math.PI / 2 + i * (Math.PI * 2 / slots);
+      const dx = Math.cos(ang), dy = Math.sin(ang);
+      if (i >= filled) {                                   // open bond — reaches outward
+        const reach = radius * (0.5 + 0.28 * (0.5 + 0.5 * Math.sin(time * 4 + i * 1.7)));
+        const a = 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(time * 4 + i * 1.7));
+        ctx.strokeStyle = hexA('#ffffff', a);
+        ctx.lineWidth = Math.max(2, radius * 0.13); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x + dx * r0, y + dy * r0); ctx.lineTo(x + dx * (r0 + reach), y + dy * (r0 + reach)); ctx.stroke();
+        ctx.fillStyle = hexA(e.glow, 0.85);
+        ctx.beginPath(); ctx.arc(x + dx * (r0 + reach), y + dy * (r0 + reach), Math.max(1.6, radius * 0.1), 0, Math.PI * 2); ctx.fill();
+      } else {                                             // filled bond — short calm nub
+        ctx.strokeStyle = hexA(e.glow, 0.5);
+        ctx.lineWidth = Math.max(1.5, radius * 0.11); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x + dx * r0, y + dy * r0); ctx.lineTo(x + dx * (r0 + radius * 0.2), y + dy * (r0 + radius * 0.2)); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  } else if (hungry) {
+    // fallback for callers that don't pass slots: the original dashed pulsing ring
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = hexA('#ffffff', 0.35 + pulse * 0.4);
