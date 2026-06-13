@@ -128,7 +128,8 @@ export class LabScene {
     const made = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
     let pre = '';
     if (prediction != null) {
-      if (prediction === made) pre = '✓ You called it! ';
+      // 'actual' is the masked "Something new" chip — a correct call on an undiscovered product.
+      if (prediction === made || (prediction === 'actual' && made !== 'nothing')) pre = '✓ You called it! ';
       else {
         const g = prediction === 'nothing' ? 'nothing' : (synthItem(prediction)?.name || prediction);
         pre = `✗ You guessed ${g}. `;

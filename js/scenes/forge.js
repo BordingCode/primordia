@@ -55,7 +55,10 @@ export class ForgeScene {
     // waiting. (Checked first so it isn't swallowed by grabbing a nucleus; only the inner core,
     // so you can still drag nuclei around the edges.)
     if (this.chargeSet && Math.hypot(x - this.cx, y - this.cy) < this.coreR * 0.55) {
-      this.charge = Math.min(1, this.charge + 0.34);
+      // A tap nudges the burn, but the Coulomb barrier still rules: the bonus shrinks for heavier
+      // fusions. Light H+H gets a real shove; O+O barely moves, so you can't mash it into being.
+      const ct = this.chargeTimeFor(this.recipeBarrier(this.chargeSet));
+      this.charge = Math.min(1, this.charge + 0.10 * (0.845 / ct));
       game.sfx.pickup();
       game.gl.burst(this.cx, this.cy, 18, { color: rgb01(el(this.chargeSet.out).glow), size: 18, speed: 120, life: 0.4, alpha: 0.8 });
       return;

@@ -50,6 +50,13 @@ export class BenchScene {
   }
   byId(id) { return this.atoms.find(a => a.id === id); }
   bonded(a, b) { return this.bonds.find(x => (x.a === a.id && x.b === b.id) || (x.a === b.id && x.b === a.id)); }
+  // true if a and b are each bonded to a common centre atom but not to each other (a geminal pair)
+  sharesCentre(a, b) {
+    if (this.bonded(a, b)) return false;
+    const nbr = (atom) => this.bonds.filter(x => x.a === atom.id || x.b === atom.id).map(x => x.a === atom.id ? x.b : x.a);
+    const na = nbr(a);
+    return nbr(b).some(id => na.includes(id));
+  }
 
   hitAtom(x, y) {
     for (let i = this.atoms.length - 1; i >= 0; i--) {
@@ -223,7 +230,10 @@ export class BenchScene {
       const d = Math.hypot(dx, dy) || 1;
       const min = a.r + b.r + (this.bonded(a, b) ? 2 : 14);
       if (d < min) {
-        const f = (min - d) * 18;
+        // Geminal pairs (two atoms bonded to the same centre, e.g. the two O's in CO₂) shouldn't
+        // shove each other hard — that fights VSEPR and squashes the molecule into a V. Let the
+        // angle force own their geometry instead.
+        const f = (min - d) * (this.sharesCentre(a, b) ? 6 : 18);
         const ux = dx / d, uy = dy / d;
         if (!a.drag) { a.vx -= ux * f * dt; a.vy -= uy * f * dt; }
         if (!b.drag) { b.vx += ux * f * dt; b.vy += uy * f * dt; }
@@ -239,15 +249,19 @@ export class BenchScene {
         else if (bd.b === center.id) { const o = this.byId(bd.a); if (o) nbrs.push(o); }
       }
       if (nbrs.length < 2 || nbrs.length > 3) continue;
+      const bent = center.sym === 'O' || center.sym === 'S';
       const target = nbrs.length === 2
-        ? ((center.sym === 'O' || center.sym === 'S') ? 104.5 * Math.PI / 180 : Math.PI)
+        ? (bent ? 104.5 * Math.PI / 180 : Math.PI)
         : 118 * Math.PI / 180;
+      // Linear centres (e.g. carbon in CO₂) need extra authority so the molecule reads straight,
+      // not squashed; bent centres (water) get a firmer pull toward 104.5° too.
+      const strength = nbrs.length === 2 ? (bent ? 80 : 110) : 55;
       const items = nbrs.map(o => ({ o, a: Math.atan2(o.y - center.y, o.x - center.x) })).sort((p, q) => p.a - q.a);
       const pairs = items.length === 2 ? [[0, 1]] : [[0, 1], [1, 2], [2, 0]];
       for (const [i, j] of pairs) {
         const cur = items[i], nxt = items[j];
         let sep = nxt.a - cur.a; if (sep <= 0) sep += Math.PI * 2;
-        const f = (sep - target) * 55 * dt;
+        const f = (sep - target) * strength * dt;
         if (!nxt.o.drag) { nxt.o.vx -= -Math.sin(nxt.a) * f; nxt.o.vy -= Math.cos(nxt.a) * f; }
         if (!cur.o.drag) { cur.o.vx += -Math.sin(cur.a) * f; cur.o.vy += Math.cos(cur.a) * f; }
       }

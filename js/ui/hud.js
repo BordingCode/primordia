@@ -347,19 +347,28 @@ export function openPredict(game, actual, onPick) {
   body.innerHTML = '';
   const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
   // multiple choice: the real answer (if any) + a few decoys you've already met, then "Nothing".
-  const knownIds = [...game.state.discoveredItems, ...game.state.asidesFound].filter(id => ITEMS[id]);
+  // Never spoil an undiscovered product by name — if you haven't met it, it shows as a masked
+  // "Something new" chip (id 'actual', resolved as correct in lab.js) instead of its real name.
+  const discovered = new Set([...game.state.discoveredItems, ...game.state.asidesFound]);
+  const knownIds = [...discovered].filter(id => ITEMS[id]);
   const decoys = shuffle(knownIds.filter(id => id !== actual)).slice(0, 3);
+  const realKnown = actual && actual !== 'nothing' && ITEMS[actual] && discovered.has(actual);
   const choiceIds = [];
-  if (actual && actual !== 'nothing' && ITEMS[actual]) choiceIds.push(actual);
+  if (realKnown) choiceIds.push(actual);
   decoys.forEach(d => { if (!choiceIds.includes(d)) choiceIds.push(d); });
+  // if the real product is undiscovered, offer a masked chip that still counts as correct
+  if (actual && actual !== 'nothing' && !realKnown) choiceIds.push('actual');
   shuffle(choiceIds);
   const grid = document.createElement('div'); grid.className = 'predict-grid';
   const pick = (id) => { ov.classList.add('hidden'); onPick(id); };
   choiceIds.forEach(id => {
-    const it = ITEMS[id];
+    const masked = id === 'actual';
+    const it = masked ? null : ITEMS[id];
     const b = document.createElement('button'); b.className = 'predict-chip';
-    b.style.setProperty('--c', it.color);
-    b.innerHTML = `<span class="pc-abbr">${it.abbr}</span><span class="pc-name">${it.name}</span>`;
+    b.style.setProperty('--c', masked ? '#9fd0ff' : it.color);
+    b.innerHTML = masked
+      ? `<span class="pc-abbr">???</span><span class="pc-name">Something new</span>`
+      : `<span class="pc-abbr">${it.abbr}</span><span class="pc-name">${it.name}</span>`;
     b.addEventListener('click', () => pick(id));
     grid.appendChild(b);
   });

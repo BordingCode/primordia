@@ -159,6 +159,9 @@ const game = {
     this._autoZoom('cell', 'cellReached');
   },
   _autoZoom(id, flag) {
+    // Don't burn the first-unlock celebration while sandbox is on — sandbox unlocks everything,
+    // so leave the *Reached flags untouched so the real auto-zoom can still fire later.
+    if (this.state.sandbox) return;
     if (this.stageUnlocked(id) && !this.state[flag]) {
       this.state[flag] = true; this.persist();
       setTimeout(() => { this.go(id, true); UI.flash(`New stage unlocked · ${this.scenes[id].title}`); }, 850);
