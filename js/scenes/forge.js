@@ -58,7 +58,19 @@ export class ForgeScene {
       const nn = this.spawnNucleus(chip.sym, x, y - 4);
       this.nuclei.push(nn); this.drag = nn; nn.drag = true;
       game.sfx.pickup();
+      this.forgeCoach(game, chip.sym);
     }
+  }
+
+  // First time you pick up each nucleus, meet it — taught at the moment you hold it.
+  forgeCoach(game, sym) {
+    const lines = {
+      H:  'Hydrogen — a single proton, the lightest nucleus. Stars fuse it first and most easily.',
+      He: 'Helium — two protons, the ash of burning hydrogen. Pile three together for the leap to carbon.',
+      C:  'Carbon — six protons. Its stronger charge fights back harder; only a hot, heavy star can force it further.',
+      O:  'Oxygen — eight protons. Forcing these together takes the crushing core of a giant star.',
+    };
+    if (lines[sym]) game.coachOnce('forge_' + sym, { kind: 'hint', title: el(sym).name, sub: lines[sym] });
   }
   onMove(x, y) { if (this.drag) { this.drag.x = x; this.drag.y = y; this.drag.vx = 0; this.drag.vy = 0; } }
   onUp() { if (this.drag) { this.drag.drag = false; this.drag = null; } }
@@ -75,6 +87,17 @@ export class ForgeScene {
     }
     return { counts, inside };
   }
+
+  // The Coulomb barrier of a fusion: sum of proton-charge products over every input pair.
+  // More protons → stronger repulsion → harder (hotter, slower) to fuse. Real physics.
+  recipeBarrier(recipe) {
+    const zs = recipe.in.map(s => el(s).z);
+    let b = 0;
+    for (let i = 0; i < zs.length; i++) for (let j = i + 1; j < zs.length; j++) b += zs[i] * zs[j];
+    return b || 1;
+  }
+  // How long the core must hold the set before it ignites — heavier barrier = longer.
+  chargeTimeFor(barrier) { return Math.max(0.8, Math.min(3.5, 0.8 + barrier * 0.045)); }
 
   // does a recipe's inputs fit inside the core contents?
   fusableRecipe(counts) {
@@ -109,11 +132,27 @@ export class ForgeScene {
       const dx = b.x - a.x, dy = b.y - a.y;
       const d = Math.hypot(dx, dy) || 1;
       const min = a.r + b.r;
+      const ux = dx / d, uy = dy / d;
       if (d < min) {
         const f = (min - d) / min * 600;
-        const ux = dx / d, uy = dy / d;
         if (!a.drag) { a.vx -= ux * f * dt; a.vy -= uy * f * dt; }
         if (!b.drag) { b.vx += ux * f * dt; b.vy += uy * f * dt; }
+      }
+      // Coulomb barrier: like charges repel at a distance, scaled by the proton product.
+      // Two hydrogens barely notice; two carbons or oxygens fight hard — you FEEL the barrier.
+      const charge = el(a.sym).z * el(b.sym).z;
+      const reach = min + 52;
+      if (charge > 2 && d > min && d < reach) {
+        const f = (1 - (d - min) / (reach - min)) * charge * 5;
+        if (!a.drag) { a.vx -= ux * f * dt; a.vy -= uy * f * dt; }
+        if (!b.drag) { b.vx += ux * f * dt; b.vy += uy * f * dt; }
+        // heavy pairs visibly spark as their charges arc against each other
+        if (charge >= 12 && Math.random() < 0.05) {
+          game.gl.spawn((a.x + b.x) / 2, (a.y + b.y) / 2, {
+            color: rgb01('#ffd27a'), size: 10, alpha: 0.8, life: 0.3,
+            vx: (Math.random() - 0.5) * 140, vy: (Math.random() - 0.5) * 140,
+          });
+        }
       }
     }
     for (const n of ns) {
@@ -130,7 +169,11 @@ export class ForgeScene {
     const recipe = this.fusableRecipe(counts);
     if (recipe) {
       if (this.chargeSet !== recipe) { this.chargeSet = recipe; this.charge = 0; }
-      this.charge += dt / 1.0;
+      const barrier = this.recipeBarrier(recipe);
+      this.charge += dt / this.chargeTimeFor(barrier);
+      // teach WHY heavier elements are harder — fires the first time you fuse a high-barrier set
+      if (barrier >= 12) game.coachOnce('forge_barrier', { kind: 'hint', title: 'The harder burn',
+        sub: 'Heavier nuclei carry more protons, so their charges fight harder. That’s why a star must grow hotter and denser to fuse them — and why it takes longer here.' });
       // charge particles spiral into core
       if (Math.random() < 0.6) {
         const a = Math.random() * Math.PI * 2, rr = this.coreR * (0.9 + Math.random() * 0.6);
@@ -208,8 +251,34 @@ export class ForgeScene {
       ctx.fillText('gravity will do the rest', this.cx, this.cy + 16);
     }
 
-    // nuclei
-    for (const n of this.nuclei) drawAtom(ctx, n.x, n.y, n.sym, { hungry: false, pulse: n.drag ? 0.4 : 0 });
+    // what's forming, while the core charges — names the reaction + builds anticipation
+    if (this.chargeSet && this.charge > 0.04) {
+      const prod = el(this.chargeSet.out);
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(255,235,200,${0.45 + this.charge * 0.5})`;
+      ctx.font = '600 13px "Outfit", system-ui, sans-serif';
+      ctx.fillText('forging  →  ' + prod.name, this.cx, this.cy + this.coreR + 30);
+      ctx.fillStyle = 'rgba(220,235,255,0.4)';
+      ctx.font = '400 11px "Outfit", system-ui, sans-serif';
+      ctx.fillText(this.chargeSet.name, this.cx, this.cy + this.coreR + 48);
+      ctx.restore();
+    }
+
+    // nuclei — heavier ones (more protons) carry a warm "charged" aura you can see
+    for (const n of this.nuclei) {
+      const z = el(n.sym).z;
+      if (z >= 6) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const hr = n.r * (1.7 + 0.18 * Math.sin(game.time * 3));
+        const g = ctx.createRadialGradient(n.x, n.y, n.r * 0.5, n.x, n.y, hr);
+        const a = Math.min(0.24, 0.05 + z * 0.016);
+        g.addColorStop(0, `rgba(255,140,80,${a})`); g.addColorStop(1, 'rgba(255,140,80,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, hr, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      drawAtom(ctx, n.x, n.y, n.sym, { hungry: false, pulse: n.drag ? 0.4 : 0 });
+    }
 
     // source tray
     for (const c of this.chips) this.drawChip(ctx, c, game);
@@ -227,6 +296,10 @@ export class ForgeScene {
     ctx.fillStyle = 'rgba(220,235,255,0.7)';
     ctx.font = '500 11px "Outfit", system-ui, sans-serif';
     ctx.textAlign = 'center';
+    const z = el(c.sym).z;
     ctx.fillText(el(c.sym).name, c.x, c.y + c.r + 16);
+    ctx.fillStyle = 'rgba(255,180,120,0.7)';
+    ctx.font = '500 10px "Outfit", system-ui, sans-serif';
+    ctx.fillText(z + (z === 1 ? ' proton' : ' protons'), c.x, c.y + c.r + 29);
   }
 }
