@@ -9,6 +9,7 @@ import { ITEMS, SYNTH, ENERGIES, synthMatch, item as synthItem, energy as energy
 const SUB = { 0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉' };
 const fsub = (f) => Object.keys(f).map(k => k + (f[k] > 1 ? SUB[f[k]] : '')).join('');
 const NSLOTS = 6;
+const PREDICT_REWARD = 3;   // Insight for correctly predicting a reaction's outcome
 
 // visual descriptor for any reagent id (element / molecule / item)
 function visual(id) {
@@ -34,7 +35,7 @@ export class LabScene {
     this.layout(game);
     game.coachOnce('lab_experiment', { kind: 'hint',
       title: 'Experiment freely',
-      sub: 'You don’t have to follow the goals — load anything, pick any energy, and react. Some real reactions are hidden off the path (see the Codex).' });
+      sub: 'Load anything, pick any energy, and react — you don’t have to follow the goals. Before each reaction you’ll guess the outcome: a correct call earns insight, and a wrong one teaches the most. (Turn guessing off in the menu.)' });
   }
 
   layout(game) {
@@ -126,10 +127,15 @@ export class LabScene {
     game.logExperiment();
     const res = synthMatch(counts, this.energy);
     const made = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
+    // Reasoning, not luck, is what the game rewards: a correct prediction earns Insight —
+    // including correctly calling that NOTHING would form (that's real chemical judgement too).
+    const correctCall = prediction != null && (
+      (made === 'nothing' && prediction === 'nothing') ||
+      (made !== 'nothing' && (prediction === made || prediction === 'actual'))
+    );
     let pre = '';
     if (prediction != null) {
-      // 'actual' is the masked "Something new" chip — a correct call on an undiscovered product.
-      if (prediction === made || (prediction === 'actual' && made !== 'nothing')) pre = '✓ You called it! ';
+      if (correctCall) { pre = `✓ You called it! +✦${PREDICT_REWARD} `; game.award(PREDICT_REWARD); }
       else {
         const g = prediction === 'nothing' ? 'nothing' : (synthItem(prediction)?.name || prediction);
         pre = `✗ You guessed ${g}. `;
@@ -144,9 +150,13 @@ export class LabScene {
       game.sfx.discover();
       game.celebrate(this.cx, this.cy, it.color);
       game.gl.burst(this.cx, this.cy, aside ? 50 : 70, { color: rgb01(energyDef(this.energy).color), speed: 240, size: 28, life: 1.0, alpha: 0.9 });
+      // Conservation made visible: condensation reactions physically expel a water molecule.
+      // You SEE the atoms aren't free — every peptide/glycosidic/ester bond sheds an H₂O.
+      const shedsWater = res.recipe && res.recipe.releases === 'H2O';
+      if (shedsWater) this.ejectWater(game);
       if (aside) game.discoverAside(res.product); else game.discoverItem(res.product);
       const title = aside ? (isNew ? `Curiosity — ${it.name}` : it.name) : (isNew ? `Synthesised ${it.name}` : it.name);
-      const sub = pre + (it.formula ? it.name + ' · ' + it.formula : it.name);
+      const sub = pre + (it.formula ? it.name + ' · ' + it.formula : it.name) + (shedsWater ? '  ·  + H₂O released' : '');
       this.toast(game, 'item', title, sub, it.fact, res.product);
       this.slots.forEach(s => s.id = null);
       this.layout(game);
@@ -161,11 +171,29 @@ export class LabScene {
     else this.toast(game, 'fail', 'No reaction', pre + (res.hint || 'These reagents don’t combine. Rethink the recipe.'));
   }
 
+  // A little water molecule visibly squeezed out of the reactor and flung aside — the felt
+  // proof that atoms are conserved (dehydration synthesis), not conjured from nowhere.
+  ejectWater(game) {
+    const ax = Math.random() < 0.5 ? -1 : 1;
+    const dropX = this.cx + ax * (this.RR + 26), dropY = this.cy - 8;
+    game.gl.burst(this.cx, this.cy, 10, { color: rgb01('#9fe6ff'), size: 14, speed: 130, life: 0.6, alpha: 0.85 });
+    game.gl.spawn(dropX, dropY, { color: rgb01('#9fe6ff'), size: 22, alpha: 0.9, life: 1.1, vx: ax * 70, vy: -30, drag: 0.96 });
+    this.waterPop = { x: dropX, y: dropY, t: 0 };
+    game.sfx.bond();
+  }
+
   toast(game, kind, title, sub, fact, item) {
     import('../ui/hud.js').then(UI => UI.toast(game, { kind, title, sub, fact, item }));
   }
 
-  update(dt) { this.reactPulse = Math.max(0, this.reactPulse - dt * 1.5); }
+  update(dt) {
+    this.reactPulse = Math.max(0, this.reactPulse - dt * 1.5);
+    if (this.waterPop) {
+      this.waterPop.t += dt;
+      this.waterPop.y -= 18 * dt;                 // the droplet label drifts up as it fades
+      if (this.waterPop.t > 1.4) this.waterPop = null;
+    }
+  }
 
   render(ctx, game) {
     const { cx, cy, RR } = this;
@@ -225,6 +253,18 @@ export class LabScene {
     }
     ctx.fillStyle = 'rgba(200,220,255,0.5)'; ctx.font = '500 11px "Outfit", system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.fillText('energy source', cx, this.energyChips[0].y - 34);
+
+    // a water molecule squeezed out by a condensation reaction, drifting up and fading
+    if (this.waterPop) {
+      const a = Math.max(0, 1 - this.waterPop.t / 1.4);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#cdeeff';
+      ctx.font = '700 14px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('+ H₂O', this.waterPop.x, this.waterPop.y);
+      ctx.restore();
+    }
 
     // palette
     for (const p of this.palette) {

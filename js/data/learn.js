@@ -8,7 +8,7 @@ export const LEARN = {
   C:  'Carbon can’t form from a simple pair — it needs a rare three-way pile-up of helium nuclei deep inside an aging star (the “triple-alpha” process). So make helium first, then crowd several of them together.',
   N:  'Nitrogen is forged in the CNO cycle, where carbon helps a star burn hydrogen. Try bringing carbon together with the lightest element of all.',
   O:  'Oxygen is born when carbon swallows a helium nucleus. You’ll need both of them in the core at once.',
-  P:  'Phosphorus is forged in massive stars when oxygen nuclei are crushed into one another. Bring oxygen together with oxygen.',
+  P:  'Phosphorus is forged in the late burning stages of massive stars and scattered by supernovae. Here, crush oxygen nuclei together to reach it.',
   S:  'Sulfur is built up one proton at a time in the hearts of massive stars. Forge phosphorus first, then feed it a single hydrogen nucleus.',
 
   // ---- Bench: reason it out from valence ----
@@ -31,7 +31,7 @@ export const LEARN = {
   fatty_acid:   'In the heat of deep-sea vents, carbon dioxide and hydrogen are welded into long, greasy chains.',
   phosphate:    'Phosphorus only becomes useful to life once it’s clothed in oxygen — and that takes heat.',
   protein:      'Proteins are amino acids strung together, each link squeezing out a water — which needs heat. Use the amino acids you’ve already made.',
-  nucleotide:   'A single genetic “letter” is three parts clicked together: a sugar, a base, and a phosphate. No extra energy required.',
+  nucleotide:   'A single genetic “letter” is three parts joined — a sugar, a base and a phosphate — each link squeezing out a water. It takes heat, and in truth it’s one of the trickiest steps in all of life’s chemistry.',
   rna:          'String several genetic letters into a chain, with a little heat, and you get a strand that can carry — and copy — information.',
   membrane:     'Lipids are two-faced: one end loves water, the other flees it. Drop enough of them into water and they wrap themselves into a hollow shell, all on their own.',
   protocell:    'Life’s three inventions, brought together: a container to hold things in, a copier to carry information, and a worker to do jobs. You’ve already made all three.',

@@ -14,7 +14,7 @@ export const FUSION = [
   { in: ['C', 'H'],           out: 'N',  name: 'CNO cycle',
     note: 'Carbon catalyses hydrogen burning and, along the way, nitrogen is forged.' },
   { in: ['O', 'O'],           out: 'P',  name: 'Oxygen burning',
-    note: 'In massive stars, oxygen fuses into heavier elements including phosphorus.' },
+    note: 'In the late, frantic burning stages of a massive star, oxygen fuses into heavier elements — among them a little phosphorus.' },
   { in: ['P', 'H'],           out: 'S',  name: 'Proton capture',
     note: 'Deep in a massive star, phosphorus catches a single proton — a hydrogen nucleus — and turns into sulfur.' },
 ];
