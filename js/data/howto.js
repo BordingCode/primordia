@@ -38,14 +38,14 @@ export const HOWTO = {
   },
   cell: {
     title: 'First Life',
-    intro: 'You’ve built a protocell — now keep it alive long enough to multiply.',
+    intro: 'You built a protocell from three inventions — a Membrane, an RNA copier and protein Enzymes. Keep the colony alive and growing.',
     steps: [
-      'Your protocell drifts in the pool, slowly <b>burning energy</b>. If it runs out, it <b>dies</b>.',
-      'Tap anywhere in the pool to release <b>nutrients</b>. Your supply is limited and refills slowly (the dots at the bottom).',
-      'Cells drift toward food and eat it. A <b>well-fed cell grows and splits in two</b>.',
-      'Keep the <b>whole colony</b> fed as it grows. Reach the target number of cells to bring the world to life.',
+      'Tap the pool to release <b>nutrients</b> (limited, refilling — the dots at the bottom). Cells drift to food, grow, and a well-fed cell <b>splits in two</b>.',
+      'Spend <b>insight</b> (top-right ✦) on your three inventions — each does a real job: <b>Membrane</b> stops energy leaking out, <b>Enzymes</b> wring more energy from each meal, <b>RNA</b> makes cells divide sooner.',
+      'Beware the <b>UV flares</b>: early Earth had no ozone, so raw ultraviolet sweeps the pool and drains every cell. A stronger <b>Membrane</b> is your shield.',
+      'If a cell’s energy ring empties, it <b>dies</b>. Lose them all and you start again from one. Reach the target colony to bring the world to life.',
     ],
-    tip: 'Spread food where the cells are, and don’t let your nutrient dots run all the way out.',
+    tip: 'Membrane is your shield; Enzymes and RNA are your engine. Upgrade whichever is your weak link.',
   },
   world: {
     title: 'The World',

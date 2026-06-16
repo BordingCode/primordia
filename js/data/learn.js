@@ -37,7 +37,7 @@ export const LEARN = {
   protocell:    'Life’s three inventions, brought together: a container to hold things in, a copier to carry information, and a worker to do jobs. You’ve already made all three.',
 
   // ---- Stage challenges ----
-  cell:  'Protocells burn energy just to stay alive, and die if it runs out. Feeding them lets them grow, and a well-fed cell splits in two. The catch: your nutrient drops are limited and every new cell is another mouth — so feed steadily and never let the pool run dry.',
+  cell:  'A protocell is three inventions working as one. The Membrane is a wall — a stronger one lets less energy leak away and shields the colony from UV flares. Enzymes (proteins) are the workers — better ones wring more energy from every bite of food. RNA is the copier — a better one lets a well-fed cell divide sooner. Feed steadily, spend insight to upgrade whichever is your weak link, and survive the ultraviolet.',
   world: 'Tap to spread photosynthetic life — cells that drink sunlight and breathe out oxygen. But here’s the twist real Earth lived through: that oxygen was poison to the early world. As it builds up it triggers the Great Oxygenation, a planet-wide die-off. Only an oxygen-adapted remnant survives — and inherits a blue-skied, breathing world. Keep tapping through the crisis; life comes back.',
 };
 

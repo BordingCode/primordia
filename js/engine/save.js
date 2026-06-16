@@ -14,6 +14,7 @@ const DEFAULT = {
   sandboxUnlocked: false,        // bought with insight — frees every stage & reagent
   sandbox: false,                // sandbox mode currently on
   coloniesLost: 0,               // protocell colonies that perished (a real setback count)
+  cellUpgrades: { membrane: 0, protein: 0, rna: 0 },  // extra levels bought for each invention (Cell)
   oxygenCrisisSeen: false,       // the Great Oxygenation die-off has fired once (World)
   scene: 'forge',
   introSeen: false,
