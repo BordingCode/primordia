@@ -76,7 +76,7 @@ export class BenchScene {
     const chip = this.hitChip(x, y);
     if (chip) {
       const na = this.spawnAtom(chip.sym, x, y - 4);
-      this.atoms.push(na); this.drag = na; na.drag = true; game.sfx.pickup();
+      this.atoms.push(na); this.drag = na; na.drag = true; game.sfx.pickup(); game.noteWonderDrag();
       this.feltCoach(game, chip.sym);
     }
   }
@@ -305,6 +305,23 @@ export class BenchScene {
       ctx.font = '400 13px "Outfit", system-ui, sans-serif';
       ctx.fillText('every atom must fill all its bonds — no leftovers', game.W / 2, game.H * 0.42 + 22);
     }
+    // WONDER: while you drag an atom that still wants a bond, a pulsing line points to the
+    // nearest atom it could bond with — a wordless "bring these two together".
+    if (this.drag && this.freeSlots(this.drag) > 0) {
+      let best = null, bd = 1e9;
+      for (const a of this.atoms) {
+        if (a === this.drag || this.bonded(a, this.drag) || this.freeSlots(a) <= 0) continue;
+        const d = Math.hypot(a.x - this.drag.x, a.y - this.drag.y);
+        if (d < bd) { bd = d; best = a; }
+      }
+      if (best && bd < 150) {
+        const pr = 0.5 + 0.5 * Math.sin(game.time * 8);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = `rgba(190,240,255,${0.28 + pr * 0.4})`; ctx.lineWidth = 2; ctx.setLineDash([3, 6]);
+        ctx.beginPath(); ctx.moveTo(this.drag.x, this.drag.y); ctx.lineTo(best.x, best.y); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
+      }
+    }
     // bonds first
     for (const bd of this.bonds) {
       const a = this.byId(bd.a), b = this.byId(bd.b);
@@ -316,21 +333,30 @@ export class BenchScene {
       drawAtom(ctx, a.x, a.y, a.sym, { hungry: fs > 0, pulse: Math.abs(a.pulse), slots: v, filled: v - fs, time: game.time });
     }
     // tray
-    for (const c of this.chips) this.drawChip(ctx, c, game.time);
+    for (const c of this.chips) this.drawChip(ctx, c, game);
     // clear button
     this.drawClear(ctx);
   }
 
-  drawChip(ctx, c, time = 0) {
-    ctx.save();
+  drawChip(ctx, c, game) {
+    const time = game.time;
     const e = el(c.sym);
+    // WONDER: a "pick me up" bob + brighter pulsing halo, until the player has learned to drag.
+    const wonder = game.wonderActive();
+    const pr = 0.5 + 0.5 * Math.sin(time * 3 + c.x * 0.05);
+    const y = c.y + (wonder ? Math.sin(time * 3 + c.x * 0.05) * 3 : 0);
+    ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r * 1.7);
-    g.addColorStop(0, hexA(e.glow, 0.28)); g.addColorStop(1, hexA(e.glow, 0));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.7, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(c.x, y, 2, c.x, y, c.r * 1.7);
+    g.addColorStop(0, hexA(e.glow, wonder ? 0.28 + pr * 0.22 : 0.28)); g.addColorStop(1, hexA(e.glow, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, y, c.r * 1.7, 0, Math.PI * 2); ctx.fill();
+    if (wonder) {
+      ctx.strokeStyle = hexA(e.glow, 0.25 + pr * 0.4); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(c.x, y, c.r + 6 + pr * 3, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
     // tray atoms show all their arms open, so you can read each element's "appetite" at rest
-    drawAtom(ctx, c.x, c.y, c.sym, { r: c.r, slots: el(c.sym).valence, filled: 0, time });
+    drawAtom(ctx, c.x, y, c.sym, { r: c.r, slots: el(c.sym).valence, filled: 0, time });
     ctx.fillStyle = 'rgba(200,220,255,0.55)';
     ctx.font = '500 10px "Outfit", system-ui, sans-serif';
     ctx.textAlign = 'center';

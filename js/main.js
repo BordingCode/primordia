@@ -10,8 +10,14 @@ import { BenchScene } from './scenes/bench.js';
 import { LabScene } from './scenes/lab.js';
 import { CellScene } from './scenes/cell.js';
 import { WorldScene } from './scenes/world.js';
-import { rgb01 } from './render/molecules.js';
+import { rgb01, drawAtom, drawToken, hexA } from './render/molecules.js';
+import { el } from './data/elements.js';
+import { MOLECULES } from './data/recipes.js';
 import * as UI from './ui/hud.js';
+
+// subscript helper for molecule formulae shown in the big "you made it" reveal
+const REV_SUB = { 0: '₀', 1: '₁', 2: '₂', 3: '₃', 4: '₄', 5: '₅', 6: '₆', 7: '₇', 8: '₈', 9: '₉' };
+const revFormula = (f) => Object.keys(f).map(k => k + (f[k] > 1 ? REV_SUB[f[k]] : '')).join('');
 
 // The journey: nuclei → molecules → building blocks → life → a living world.
 export const STAGES = [
@@ -52,12 +58,14 @@ const game = {
   discoverElement(sym) {
     if (this.hasElement(sym)) return false;
     this.state.discoveredElements.push(sym);
+    this.showReveal('element', sym);
     this.award(4); this.persist(); UI.refreshCodex(this); this.checkGates();
     return true;
   },
   discoverMolecule(id) {
     if (this.hasMolecule(id)) return false;
     this.state.discoveredMolecules.push(id);
+    this.showReveal('molecule', id);
     this.award(10); this.persist(); UI.refreshCodex(this);
     if (this.scenes.world) this.scenes.world.onDiscovery(id, this);
     this.checkGates();
@@ -66,12 +74,33 @@ const game = {
   discoverItem(id) {
     if (this.hasItem(id)) return false;
     this.state.discoveredItems.push(id);
+    this.showReveal('item', id);
     const it = synthItem(id);
     this.award(it && it.kind === 'cell' ? 40 : it && it.kind === 'polymer' ? 20 : 14);
     this.persist(); UI.refreshCodex(this);
     if (this.scenes.world) this.scenes.world.onDiscovery(id, this);
     this.checkGates();
     return true;
+  },
+
+  // --- wonder layer (wordless cues for the youngest players) ---
+  // The big "you made THIS" hero reveal: a large picture of the new thing rises in the centre,
+  // so a child who can't read still knows exactly what they just created. Two-level: the picture
+  // is for the 6-yo, the small corner toast (with the science fact) is for the older reader.
+  reveal: null,
+  showReveal(kind, ref) {
+    let d;
+    if (kind === 'element') { const e = el(ref); d = { kind, sym: e.sym, name: e.name, color: e.glow }; }
+    else if (kind === 'molecule') { const m = MOLECULES.find(x => x.id === ref); if (!m) return; d = { kind, abbr: revFormula(m.formula), name: m.name, color: '#8ef0d0' }; }
+    else { const it = synthItem(ref); if (!it) return; d = { kind, abbr: it.abbr, name: it.name, color: it.color }; }
+    this.reveal = { ...d, t: 0, dur: 2.6 };
+  },
+  // "Drag-me" cues on tray atoms pulse only until the player has clearly learned to drag,
+  // then fade for everyone (so a teen isn't nagged). Counts successful pickups.
+  wonderActive() { return (this.state.wonderDrags || 0) < 6; },
+  noteWonderDrag() {
+    if ((this.state.wonderDrags || 0) >= 6) return;
+    this.state.wonderDrags = (this.state.wonderDrags || 0) + 1; this.persist();
   },
 
   hasAside(id) { return this.state.asidesFound.includes(id); },
@@ -190,6 +219,7 @@ const loop = createLoop({
     game.time += dt;
     gl.update(dt);
     if (game.transition) { game.transition.t += dt; if (game.transition.t >= game.transition.dur) game.transition = null; }
+    if (game.reveal) { game.reveal.t += dt; if (game.reveal.t >= game.reveal.dur) game.reveal = null; }
     if (game.scene && game.scene.update) game.scene.update(dt, game);
   },
   render() {
@@ -197,9 +227,50 @@ const loop = createLoop({
     ctx.clearRect(0, 0, game.W, game.H);
     if (game.scene && game.scene.render) game.scene.render(ctx, game);
     if (game.transition) renderTransition();
+    if (game.reveal) renderReveal();
     input.endFrame();
   },
 });
+
+// The big "you made THIS" hero reveal — a large picture of the new discovery rises and glows
+// in the centre, holds, then fades. For the youngest players: knowing WHAT you made, shown not told.
+function renderReveal() {
+  const rv = game.reveal;
+  const p = rv.t / rv.dur;
+  const appear = Math.min(1, rv.t / 0.32);                  // ease/scale in
+  const fade = p > 0.78 ? Math.max(0, 1 - (p - 0.78) / 0.22) : 1;
+  const a = appear * fade;
+  const cx = game.W / 2, cy = game.H * 0.40;
+  const pop = 1 + 0.12 * Math.sin(Math.min(rv.t, 0.5) / 0.5 * Math.PI);  // little bounce on entry
+  const r = 52 * (0.7 + appear * 0.3) * pop;
+
+  ctx.save();
+  // soft radial halo so the icon pops without fully dimming the scene
+  ctx.globalCompositeOperation = 'lighter';
+  const hg = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 3.4);
+  hg.addColorStop(0, hexA(rv.color, 0.34 * a)); hg.addColorStop(1, hexA(rv.color, 0));
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, r * 3.4, 0, Math.PI * 2); ctx.fill();
+  // an expanding celebratory ring
+  const ringP = Math.min(1, rv.t / 0.9);
+  ctx.strokeStyle = hexA(rv.color, (1 - ringP) * 0.6 * a); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, r * (1.1 + ringP * 1.8), 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = a;
+  // the big picture of what you made
+  if (rv.kind === 'element') drawAtom(ctx, cx, cy, rv.sym, { r, time: game.time });
+  else drawToken(ctx, cx, cy, { abbr: rv.abbr, color: rv.color }, { r });
+  // name + a wordless "new!" sparkle
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.font = '700 22px "Outfit", system-ui, sans-serif';
+  ctx.fillText(rv.name, cx, cy + r + 34);
+  ctx.fillStyle = hexA(rv.color, 0.9);
+  ctx.font = '600 13px "Outfit", system-ui, sans-serif';
+  ctx.fillText('✦ you made it!', cx, cy + r + 56);
+  ctx.restore();
+}
 
 function renderTransition() {
   const t = game.transition.t / game.transition.dur;

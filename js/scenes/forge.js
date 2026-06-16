@@ -69,7 +69,7 @@ export class ForgeScene {
     if (chip) {
       const nn = this.spawnNucleus(chip.sym, x, y - 4);
       this.nuclei.push(nn); this.drag = nn; nn.drag = true;
-      game.sfx.pickup();
+      game.sfx.pickup(); game.noteWonderDrag();
       this.forgeCoach(game, chip.sym);
       return;
     }
@@ -253,6 +253,26 @@ export class ForgeScene {
     ctx.beginPath(); ctx.arc(this.cx, this.cy, this.coreR, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
 
+    // WONDER: while you hold a nucleus near the core, the core visibly "wants" it (magnetic cue)
+    if (this.drag && Math.hypot(this.drag.x - this.cx, this.drag.y - this.cy) < this.coreR * 2.2) {
+      const pr = 0.5 + 0.5 * Math.sin(game.time * 6);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(255,225,160,${0.25 + pr * 0.35})`;
+      ctx.lineWidth = 2.5; ctx.setLineDash([2, 9]);
+      ctx.beginPath(); ctx.arc(this.cx, this.cy, this.coreR * 0.92, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+    }
+    // WONDER: a wordless "drag from here to here" dot travels from the first chip to the core,
+    // for the youngest players who don't yet know the chip is draggable. Fades once they've learned.
+    if (this.nuclei.length === 0 && game.wonderActive() && this.chips.length) {
+      const c0 = this.chips[0], tt = (game.time % 1.3) / 1.3;
+      const px = c0.x + (this.cx - c0.x) * tt, py = (c0.y - 8) + (this.cy - (c0.y - 8)) * tt;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = `rgba(255,240,200,${0.7 * (1 - tt)})`;
+      ctx.beginPath(); ctx.arc(px, py, 5 * (1 - tt) + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
     // label inside core when empty
     if (this.nuclei.length === 0) {
       ctx.fillStyle = 'rgba(220,235,255,0.5)';
@@ -298,14 +318,22 @@ export class ForgeScene {
   }
 
   drawChip(ctx, c, game) {
-    ctx.save();
     const e = el(c.sym);
+    // WONDER: a "pick me up" bob + brighter pulsing halo, until the player has learned to drag.
+    const wonder = game.wonderActive();
+    const pr = 0.5 + 0.5 * Math.sin(game.time * 3 + c.x * 0.05);
+    const y = c.y + (wonder ? Math.sin(game.time * 3 + c.x * 0.05) * 3 : 0);
+    ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r * 1.8);
-    g.addColorStop(0, hexA(e.glow, 0.3)); g.addColorStop(1, hexA(e.glow, 0));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.8, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(c.x, y, 2, c.x, y, c.r * 1.8);
+    g.addColorStop(0, hexA(e.glow, wonder ? 0.3 + pr * 0.22 : 0.3)); g.addColorStop(1, hexA(e.glow, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, y, c.r * 1.8, 0, Math.PI * 2); ctx.fill();
+    if (wonder) {
+      ctx.strokeStyle = hexA(e.glow, 0.25 + pr * 0.4); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(c.x, y, c.r + 6 + pr * 3, 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.restore();
-    drawAtom(ctx, c.x, c.y, c.sym, { r: c.r });
+    drawAtom(ctx, c.x, y, c.sym, { r: c.r });
     ctx.fillStyle = 'rgba(220,235,255,0.7)';
     ctx.font = '500 11px "Outfit", system-ui, sans-serif';
     ctx.textAlign = 'center';
