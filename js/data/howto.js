@@ -27,14 +27,14 @@ export const HOWTO = {
   },
   lab: {
     title: 'Synthesis Lab',
-    intro: 'Now you combine whole molecules into the building blocks of life.',
+    intro: 'Now you combine whole molecules into the building blocks of life. There’s no recipe list here — you discover the reactions by experimenting.',
     steps: [
       'Tap an ingredient at the bottom to load it into a <b>slot</b> around the reactor. Tap a loaded slot to clear it.',
       'Pick an <b>energy source</b> — lightning, UV, heat, or none. <b>This matters:</b> the same ingredients react differently (or not at all) depending on the energy.',
-      'Tap the <b>REACT</b> circle in the middle.',
+      'Tap the <b>REACT</b> circle in the middle. Each new thing you discover is added to your record in the goals panel.',
       'If nothing forms, the game tells you <b>why</b> — “wrong energy” or “something missing” is a clue, not a dead end. Adjust and try again.',
     ],
-    tip: 'Tap <b>“Learn”</b> on a goal to learn which reaction and which energy made it in real life.',
+    tip: 'Truly stuck? The goals panel has a <b>“Get a hint”</b> button that nudges you toward a reaction you can run right now.',
   },
   cell: {
     title: 'First Life',

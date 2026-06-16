@@ -157,7 +157,7 @@ function renderObjectives() {
   } else if (scene === 'lab') {
     title.textContent = G.hasItem('membrane') || G.hasItem('rna') || G.hasItem('protein')
       ? 'Assemble the parts of life' : 'Brew the building blocks';
-    SYNTH.forEach(rec => list.appendChild(productGoal(rec)));
+    renderLabObjectives(list);
   } else if (scene === 'cell') {
     title.textContent = 'Kindle the first life';
     list.appendChild(cellGoal());
@@ -254,6 +254,58 @@ function productGoal(rec) {
     dotColor: it.color, locked: !has && !prereqMet, lockedText: 'Discover its ingredients first',
     help: { riddle: it.riddle, learn: LEARN[rec.product], recipe: productRecipeStr(rec), cost, id: rec.product },
   });
+}
+
+// ---- Lab: deduce-it-yourself ----
+// No spelled-out checklist of every product. You see the broad goal, a discovery counter, and a
+// RECORD of what you've already made — then you experiment to find the rest. The Lab's "wrong
+// energy / something's missing" feedback is the teacher. A pull-only "Stuck?" button gives a hint
+// toward the next reaction you can actually run, so nobody is ever hard-stuck.
+function renderLabObjectives(list) {
+  const total = SYNTH.length;
+  const found = SYNTH.filter(r => G.hasItem(r.product)).length;
+
+  const head = document.createElement('div'); head.className = 'goal world-goal';
+  head.innerHTML = `<div class="goal-main"><b>${found} / ${total} building blocks discovered</b>
+    <div class="goal-sub">No recipe list — experiment. Load reagents, choose an energy, and react. The same ingredients react differently (or not at all) under different energy; the Lab tells you when you're close.</div></div>`;
+  list.appendChild(head);
+
+  // a record of what you've already discovered (most recent first), so progress is felt
+  const discovered = SYNTH.filter(r => G.hasItem(r.product));
+  discovered.reverse().forEach(rec => list.appendChild(discoveredRecord(rec)));
+
+  // pull-only hint toward the next reaction whose ingredients you already possess
+  const next = SYNTH.find(r => !G.hasItem(r.product) && Object.keys(r.reagents).every(id => G.has(id)));
+  const wrap = document.createElement('div'); wrap.className = 'goal world-goal';
+  const main = document.createElement('div'); main.className = 'goal-main';
+  if (next) {
+    main.innerHTML = `<b>Stuck?</b><div class="goal-sub">Pull a hint toward a reaction you could run right now — or keep experimenting.</div>`;
+    wrap.appendChild(main);
+    const btn = document.createElement('button'); btn.className = 'learnbtn';
+    btn.textContent = 'Get a hint';
+    btn.addEventListener('click', () => {
+      const it = synthItem(next.product);
+      openHelp({ riddle: it.riddle, learn: LEARN[next.product], recipe: productRecipeStr(next), cost: revealCost(next.product), id: next.product });
+    });
+    wrap.appendChild(btn);
+  } else if (found < total) {
+    main.innerHTML = `<b>Keep building</b><div class="goal-sub">No new reaction is within reach yet — discover more molecules and blocks first to open the next ones.</div>`;
+    wrap.appendChild(main);
+  } else {
+    main.innerHTML = `<b>Every building block found!</b><div class="goal-sub">You've discovered all of them — on to the Cell.</div>`;
+    wrap.appendChild(main);
+  }
+  list.appendChild(wrap);
+}
+
+function discoveredRecord(rec) {
+  const it = synthItem(rec.product);
+  const d = document.createElement('div'); d.className = 'goal done';
+  const f = it.formula || (it.abbr && it.abbr.length <= 4 ? it.abbr : '');
+  d.innerHTML = `<div class="goal-dot" style="--c:${it.color}">✓</div>
+    <div class="goal-main"><b>${it.name}</b>${f ? ` <span class="f">${f}</span>` : ''}
+    <div class="goal-sub">${it.fact}</div></div>`;
+  return d;
 }
 
 function cellGoal() {
