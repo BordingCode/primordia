@@ -229,7 +229,6 @@ export class ForgeScene {
         kind: 'element', sym: recipe.out,
         title: isNew ? `Forged ${el(recipe.out).name}` : el(recipe.out).name,
         sub: recipe.name,
-        fact: isNew ? el(recipe.out).fact : recipe.note,
       });
     });
     this.layout(game);

@@ -330,7 +330,11 @@ function worldGoal() {
 }
 
 // ---------------- Toasts ----------------
-export function toast(game, { kind, sym, item: itm, title, sub, fact }) {
+// Kept SHORT on purpose: title + a one-line sub + an optional single "spark" hook. The full
+// science fact lives in the Codex (pull-depth) and the big hero reveal shows the picture — so a
+// toast is a glance, not a wall of text both a 6-yo and a 16-yo would skip. (`sub` for hints may
+// still carry a sentence of coaching.)
+export function toast(game, { kind, sym, item: itm, title, sub, spark }) {
   const wrap = $('toasts');
   const card = document.createElement('div'); card.className = 'toast ' + kind;
   let glyph = '✦', col = '#8ef0d0';
@@ -342,12 +346,12 @@ export function toast(game, { kind, sym, item: itm, title, sub, fact }) {
   else if (kind === 'fail') { glyph = '⚐'; col = '#ff9a8a'; }
   card.style.setProperty('--c', col);
   card.innerHTML = `<div class="t-glyph">${glyph}</div><div class="t-body"><div class="t-title">${title}</div>
-    <div class="t-sub">${sub || ''}</div><div class="t-fact">${fact || ''}</div></div>`;
+    <div class="t-sub">${sub || ''}</div>${spark ? `<div class="t-fact">${spark}</div>` : ''}</div>`;
   wrap.appendChild(card);
   requestAnimationFrame(() => card.classList.add('show'));
   const kill = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 400); };
   card.addEventListener('click', kill);
-  setTimeout(kill, kind === 'fail' ? 3800 : 6500);
+  setTimeout(kill, kind === 'fail' ? 3600 : 4800);
 }
 
 // ---------------- Codex ----------------

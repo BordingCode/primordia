@@ -196,7 +196,7 @@ export class BenchScene {
       game.sfx.discover();
       game.discoverMolecule(mol.id);
       import('../ui/hud.js').then(UI => {
-        UI.toast(game, { kind: 'molecule', title: `Discovered ${mol.name}`, sub: formulaText(mol.formula), fact: mol.fact });
+        UI.toast(game, { kind: 'molecule', title: `Discovered ${mol.name}`, sub: formulaText(mol.formula) });
         UI.refreshGoals(game);
       });
     } else {

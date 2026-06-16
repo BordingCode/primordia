@@ -157,7 +157,7 @@ export class LabScene {
       if (aside) game.discoverAside(res.product); else game.discoverItem(res.product);
       const title = aside ? (isNew ? `Curiosity — ${it.name}` : it.name) : (isNew ? `Synthesised ${it.name}` : it.name);
       const sub = pre + (it.formula ? it.name + ' · ' + it.formula : it.name) + (shedsWater ? '  ·  + H₂O released' : '');
-      this.toast(game, 'item', title, sub, it.fact, res.product);
+      this.toast(game, 'item', title, sub, it.spark, res.product);
       this.slots.forEach(s => s.id = null);
       this.layout(game);
       import('../ui/hud.js').then(UI => UI.refreshGoals(game));
@@ -182,8 +182,8 @@ export class LabScene {
     game.sfx.bond();
   }
 
-  toast(game, kind, title, sub, fact, item) {
-    import('../ui/hud.js').then(UI => UI.toast(game, { kind, title, sub, fact, item }));
+  toast(game, kind, title, sub, spark, item) {
+    import('../ui/hud.js').then(UI => UI.toast(game, { kind, title, sub, spark, item }));
   }
 
   update(dt) {
