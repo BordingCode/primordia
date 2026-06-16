@@ -38,7 +38,7 @@ export const LEARN = {
 
   // ---- Stage challenges ----
   cell:  'Protocells burn energy just to stay alive, and die if it runs out. Feeding them lets them grow, and a well-fed cell splits in two. The catch: your nutrient drops are limited and every new cell is another mouth — so feed steadily and never let the pool run dry.',
-  world: 'Life, once it takes hold, spreads on its own — but slowly. The cells that learn to drink sunlight (photosynthesis) breathe out oxygen and let green life bloom across the planet. Give it time, and lend a hand by tapping where you’d like life to take root.',
+  world: 'Tap to spread photosynthetic life — cells that drink sunlight and breathe out oxygen. But here’s the twist real Earth lived through: that oxygen was poison to the early world. As it builds up it triggers the Great Oxygenation, a planet-wide die-off. Only an oxygen-adapted remnant survives — and inherits a blue-skied, breathing world. Keep tapping through the crisis; life comes back.',
 };
 
 export function learnFor(id) { return LEARN[id] || null; }

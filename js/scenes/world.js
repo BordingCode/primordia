@@ -4,6 +4,8 @@
 import { hexA, rgb01 } from '../render/molecules.js';
 import { MOLECULES } from '../data/recipes.js';
 
+const CRISIS_O2 = 0.48;   // O₂ fraction that first tips the world into the oxygen catastrophe
+
 export class WorldScene {
   constructor() {
     this.title = 'The World';
@@ -11,6 +13,9 @@ export class WorldScene {
     this.clouds = [];
     this.lifeSpots = [];
     this.life = 0;             // 0..1 coverage of life
+    this.oxygen = 0;           // 0..1 atmospheric O₂ — breathed out by photosynthetic life
+    this.crisis = null;        // {t} during the Great Oxygenation die-off animation
+    this.aerobic = false;      // life has adapted to oxygen (survived the catastrophe)
     this.finale = false;
     this.tapCD = 0;            // tap cooldown so the finale can't be spam-filled
     for (let i = 0; i < 7; i++) this.clouds.push({ a: Math.random() * Math.PI * 2, w: 0.3 + Math.random() * 0.5, sp: 0.04 + Math.random() * 0.08, r: 0.6 + Math.random() * 0.35 });
@@ -18,6 +23,9 @@ export class WorldScene {
   enter(game) {
     this._game = game;
     if (game.state.lifeBegun) this.lifeBegun = true;
+    // The oxygen catastrophe is a one-time historical event. If it already happened in a past
+    // visit, the returning world is already aerobic — it greens straight to the finale.
+    if (game.state.oxygenCrisisSeen) this.aerobic = true;
     if (game.state.colonyReached && this.lifeSpots.length === 0) this.beginLife(game, true);
     game.gl.setNebula({ colA: [0.06, 0.10, 0.30], colB: [0.10, 0.35, 0.45], intensity: 0.85, focus: [0.5, 0.45] });
     this.layout(game);
@@ -48,9 +56,12 @@ export class WorldScene {
     if (this.tapCD > 0) return;               // rate-limit so life is grown, not spam-filled
     if (Math.hypot(x - this.cx, y - this.cy) < this.R) {
       this.tapCD = 0.22;
-      this.life = Math.min(1, this.life + 0.014);
-      if (this.lifeSpots.length < 26) this.lifeSpots.push(this.randomSpot());
-      game.gl.burst(x, y, 16, { color: [0.5, 1, 0.6], size: 14, speed: 80, life: 0.6, alpha: 0.8 });
+      // During the oxygen catastrophe your help barely tells — the world is dying back. After
+      // it, life is aerobic and your taps green it for good.
+      const dying = !!this.crisis;
+      this.life = Math.min(1, this.life + (dying ? 0.002 : 0.014));
+      if (!dying && this.lifeSpots.length < 26) this.lifeSpots.push(this.randomSpot());
+      game.gl.burst(x, y, 16, { color: dying ? [1, 0.55, 0.45] : [0.5, 1, 0.6], size: 14, speed: 80, life: 0.6, alpha: 0.8 });
       game.sfx.pickup();
     }
   }
@@ -58,11 +69,25 @@ export class WorldScene {
 
   atmosphereLevel(game) { return ['CO2', 'CH4', 'NH3', 'N2', 'O2'].filter(id => game.hasMolecule(id)).length; }
   atmoColor(game) {
-    if (this.life > 0.5 || game.hasMolecule('O2')) return '#bfe9ff';
+    if (this.oxygen > 0.3 || this.aerobic) return '#bfe9ff';   // an oxygen-rich, blue sky
     if (game.hasMolecule('N2')) return '#bcd0ff';
     if (game.hasMolecule('CH4') || game.hasMolecule('NH3')) return '#ffc27a';
     if (game.hasMolecule('CO2')) return '#e8b48a';
     return '#caa0ff';
+  }
+
+  // The Great Oxygenation Event: the oxygen photosynthetic life breathes out was poison to
+  // most early life. The world dies back — then a hardy, oxygen-adapted remnant inherits it.
+  triggerOxygenCrisis(game) {
+    this.crisis = { t: 0 };
+    game.state.oxygenCrisisSeen = true; game.persist();
+    // a real die-off: most of the green world is lost
+    this.life = Math.max(0.18, this.life * 0.38);
+    for (const s of this.lifeSpots) s.s *= 0.4;
+    this.lifeSpots = this.lifeSpots.filter((_, i) => i % 3 !== 0);   // ~a third wiped out
+    game.gl.burst(this.cx, this.cy, 70, { color: rgb01('#ff6a4a'), speed: 240, size: 24, life: 1.4, alpha: 0.9 });
+    game.sfx.reject();
+    import('../ui/hud.js').then(UI => UI.flash('☠ The Great Oxygenation — the oxygen life breathed out is poison to it. Most of the world dies off.'));
   }
 
   update(dt, game) {
@@ -70,6 +95,23 @@ export class WorldScene {
     for (let i = this.ripples.length - 1; i >= 0; i--) { this.ripples[i].t += dt; if (this.ripples[i].t > this.ripples[i].max) this.ripples.splice(i, 1); }
     for (const c of this.clouds) c.a += c.sp * dt;
     if (this.tapCD > 0) this.tapCD -= dt;
+
+    // --- the oxygen catastrophe playing out: the world dies back before it adapts ---
+    if (this.crisis) {
+      this.crisis.t += dt;
+      if (Math.random() < 0.6) {
+        const a = Math.random() * Math.PI * 2, rr = this.R * (0.4 + Math.random() * 0.6);
+        game.gl.spawn(this.cx + Math.cos(a) * rr, this.cy + Math.sin(a) * rr, { color: rgb01('#ff7a52'), size: 12, alpha: 0.5, life: 0.9, vy: -20 });
+      }
+      for (const s of this.lifeSpots) s.s = Math.max(0.02, s.s - dt * 0.05);
+      if (this.crisis.t > 2.6) {
+        this.crisis = null; this.aerobic = true;
+        game.sfx.discover();
+        import('../ui/hud.js').then(UI => UI.flash('Life adapts — a hardy, oxygen-breathing world inherits the Earth. Tap to green it anew.'));
+      }
+      return;                 // normal growth is paused while the world reels
+    }
+
     if (this.lifeBegun && this.life < 1) {
       // a richer atmosphere (more of the molecules you discovered) greens the world faster —
       // your Lab work pays off here, not just on the goal list.
@@ -78,12 +120,23 @@ export class WorldScene {
       for (const s of this.lifeSpots) s.s = Math.min(0.5, s.s + dt * 0.02 * (0.5 + this.life));
       if (Math.random() < this.life * dt * 2 && this.lifeSpots.length < 26) this.lifeSpots.push(this.randomSpot());
     }
-    if (this.lifeBegun && this.life >= 0.999 && !this.finale) {
+    // photosynthetic life breathes out oxygen — it builds up, lagging the green coverage
+    if (this.lifeBegun && this.life > 0.12) {
+      this.oxygen += (this.life * 0.95 - this.oxygen) * 0.35 * dt;
+      this.oxygen = Math.max(0, Math.min(1, this.oxygen));
+    }
+    // The Great Oxygenation: the first time O₂ builds past the threshold, the world dies back.
+    if (this.lifeBegun && !this.aerobic && !this.crisis && this.oxygen >= CRISIS_O2) {
+      this.triggerOxygenCrisis(game);
+      return;
+    }
+    // finale only after the world has weathered the oxygen catastrophe and re-greened
+    if (this.lifeBegun && this.aerobic && this.life >= 0.999 && !this.finale) {
       this.finale = true;
       game.celebrate(this.cx, this.cy - this.R * 0.3, '#8effa8');
       game.gl.burst(this.cx, this.cy, 90, { color: [0.5, 1, 0.6], speed: 260, size: 26, life: 1.6, alpha: 0.9 });
       game.sfx.discover();
-      import('../ui/hud.js').then(UI => UI.flash('A living world is born 🌍'));
+      import('../ui/hud.js').then(UI => UI.flash('A living world that breathes oxygen 🌍'));
     }
     if (this.lifeBegun && Math.random() < 0.3) {
       const a = Math.random() * Math.PI * 2;
@@ -175,19 +228,34 @@ export class WorldScene {
     ctx.fillText(this.titleLine(game), cx, cy + R + 48);
     ctx.fillStyle = 'rgba(200,220,255,0.55)'; ctx.font = '400 13px "Outfit", system-ui, sans-serif';
     ctx.fillText(this.subLine(game), cx, cy + R + 72);
+
+    // the oxygen catastrophe: a fading red wash over the whole world
+    if (this.crisis) {
+      const a = Math.max(0, 0.45 - this.crisis.t * 0.12);
+      ctx.save(); ctx.fillStyle = `rgba(180,45,25,${a})`; ctx.fillRect(0, 0, game.W, game.H); ctx.restore();
+    }
   }
 
   titleLine(game) {
     if (this.finale) return 'A living world';
-    if (this.lifeBegun) return this.life > 0.5 ? 'Life is greening the world' : 'The first life takes hold';
+    if (this.crisis) return 'The Great Oxygenation';
+    if (this.lifeBegun) {
+      if (this.aerobic) return this.life > 0.5 ? 'An oxygen world greens anew' : 'A hardy world recovers';
+      return this.life > 0.5 ? 'Life is greening the world' : 'The first life takes hold';
+    }
     const done = game.state.discoveredMolecules.length;
     if (done >= MOLECULES.length) return 'The stage is set for life';
     if (!game.hasMolecule('H2O')) return 'A barren young world';
     return 'Oceans and skies are forming';
   }
   subLine(game) {
-    if (this.finale) return 'From a single atom of hydrogen — you grew a living world.';
-    if (this.lifeBegun) return `${Math.round(this.life * 100)}% alive · a richer atmosphere greens it faster · tap to help`;
+    if (this.finale) return 'From a single atom of hydrogen — you grew a world that breathes oxygen.';
+    if (this.crisis) return 'The oxygen life breathes out is poison to it — the world dies back.';
+    if (this.lifeBegun) {
+      const pct = Math.round(this.life * 100), o2 = Math.round(this.oxygen * 100);
+      if (!this.aerobic && this.oxygen > 0.25) return `${pct}% alive · O₂ rising ${o2}% · tap to spread life — but watch the oxygen…`;
+      return `${pct}% alive · O₂ ${o2}% · tap to spread photosynthetic life`;
+    }
     const done = game.state.discoveredMolecules.length;
     if (done >= MOLECULES.length) return 'Now brew the building blocks of life in the Lab';
     return `${done} / ${MOLECULES.length} molecules seeded into the world`;

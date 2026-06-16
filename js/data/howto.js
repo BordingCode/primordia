@@ -52,9 +52,9 @@ export const HOWTO = {
     intro: 'This planet grows out of everything you make.',
     steps: [
       'Every molecule you discover changes the world — its <b>air and oceans</b> build up over time.',
-      'Once your protocell colony takes hold, <b>life spreads</b> across the planet.',
-      'Tap the planet to help life <b>take root</b>, and watch it slowly turn green and alive.',
+      'Once your colony takes hold, tap the planet to spread <b>photosynthetic life</b>. It greens the world and breathes out <b>oxygen</b>.',
+      'But that oxygen is <b>poison</b> to early life. As it builds, it triggers the <b>Great Oxygenation</b> — a real planet-wide die-off — before a hardy, oxygen-breathing world recovers.',
     ],
-    tip: 'There’s no failing here — it’s the reward for everything you’ve built.',
+    tip: 'Keep tapping through the oxygen crisis — life adapts, and the world comes back greener and bluer.',
   },
 };
