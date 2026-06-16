@@ -440,6 +440,50 @@ export function openPredict(game, actual, onPick) {
   ov.classList.remove('hidden');
 }
 
+// ---------------- Finale: your journey (synthesis recap) ----------------
+// The one moment the whole game connects into a STORY the player can retell. They tap through
+// their own lineage and watch the chain — hydrogen → stars → molecules → life → world — assemble.
+const LINEAGE = [
+  { glyph: 'H',  title: 'One atom of hydrogen', text: 'You began with the simplest, oldest atom in the universe.' },
+  { glyph: '✦',  title: 'Forged in a star', text: 'By fusing nuclei, you made helium, then carbon, nitrogen and oxygen — the atoms of life.' },
+  { glyph: '⬡',  title: 'The first molecules', text: 'You filled every atom’s bonds — building water, methane, ammonia and the early air.' },
+  { glyph: '⚡',  title: 'Lightning in the soup', text: 'A spark through that air forged amino acids and HCN — the seed of the genetic code.' },
+  { glyph: '🧬', title: 'A self-copying thread', text: 'You stacked the letters into RNA — a molecule that carries information and copies itself.' },
+  { glyph: '◯',  title: 'A wall and workers', text: 'Fatty acids wrapped a membrane; amino acids became proteins, the cell’s machines.' },
+  { glyph: '⬭',  title: 'The first life', text: 'You sealed them into a protocell and kept a colony alive against starvation and UV.' },
+  { glyph: '🌍', title: 'A living world', text: 'Life spread, breathed out oxygen, survived its own poison, and inherited the Earth.' },
+];
+const LINEAGE_END = 'From a single atom of hydrogen — you built a living world. That may be how life really began.';
+
+export function showLineage() {
+  const ov = $('lineage'), chain = $('lineageChain'), nextBtn = $('lineageNext');
+  if (!ov || !chain || !nextBtn) return;
+  chain.innerHTML = '';
+  let i = 0;
+  const addStep = () => {
+    const s = LINEAGE[i];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:12px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid rgba(255,255,255,0.07);opacity:0;transform:translateY(10px);transition:opacity .4s ease, transform .4s ease';
+    row.innerHTML = `<div style="flex:0 0 34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border-radius:50%;background:rgba(140,240,208,0.12);color:#bfffe6">${s.glyph}</div>`
+      + `<div style="flex:1"><b style="color:#dff3ff">${s.title}</b><div style="font-size:13px;color:rgba(210,228,255,0.72);margin-top:2px">${s.text}</div></div>`;
+    chain.appendChild(row);
+    requestAnimationFrame(() => { row.style.opacity = '1'; row.style.transform = 'none'; });
+    chain.scrollTop = chain.scrollHeight;
+    i++;
+    if (i >= LINEAGE.length) nextBtn.textContent = 'And so… ✦';
+  };
+  nextBtn.textContent = 'Next ›';
+  addStep();                              // first link shown immediately
+  nextBtn.onclick = () => {
+    if (i < LINEAGE.length) { addStep(); return; }
+    // final beat: replace the chain with the closing line, then let them close
+    chain.innerHTML = `<p style="font-size:16px;line-height:1.5;color:#dff3ff;text-align:center;padding:18px 6px">${LINEAGE_END}</p>`;
+    nextBtn.textContent = 'Close';
+    nextBtn.onclick = () => ov.classList.add('hidden');
+  };
+  ov.classList.remove('hidden');
+}
+
 // ---------------- Intro ----------------
 export function showIntro(game, done) {
   const intro = $('intro'); intro.classList.remove('hidden');
