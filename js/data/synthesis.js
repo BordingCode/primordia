@@ -32,7 +32,7 @@ export const ITEMS = {
                   fact: 'Ribose — a 5-carbon sugar from the formose reaction. The “R” in RNA.',
                   spark: 'The 5-carbon sugar that is the “R” in RNA.' },
   adenine:      { id: 'adenine', name: 'Adenine', abbr: 'Ade', formula: 'C₅H₅N₅', color: '#ff8fbf', kind: 'block',
-                  riddle: 'Five of that little poison, warmed together, spell the first letter of the genetic code.',
+                  riddle: 'Pile up enough of that same little poison, warm it, and the first letter of the genetic code assembles itself — but how many does it take?',
                   fact: 'Adenine — a base of DNA & RNA. Remarkably, it is exactly five HCN molecules joined together (Oró, 1961).',
                   spark: 'A DNA letter that is, astonishingly, exactly five HCN poisons joined.' },
   fatty_acid:   { id: 'fatty_acid', name: 'Fatty acid', abbr: 'Lipid', formula: '~C₁₂', color: '#ffc27a', kind: 'block',
@@ -156,9 +156,14 @@ function classifyNull(counts, energyId) {
 }
 
 // Returns { status, recipe?, product?, hint? }
-// status: 'ok' | 'aside' | 'wrong-energy' | 'incomplete' | 'none' | 'empty'
+// status: 'ok' | 'aside' | 'wrong-energy' | 'incomplete' | 'none' | 'inert' | 'empty'
 export function synthMatch(counts, energyId) {
   if (!counts || Object.keys(counts).length === 0) return { status: 'empty' };
+  // Cross-stage RETRIEVAL: N₂'s triple bond (you felt it on the Bench) is one of the strongest in
+  // nature — life can't crack it. Loading nitrogen GAS makes you go back for nitrogen in a looser
+  // form (ammonia). Nothing here ever consumes N₂, so this fires whenever it's in the ring.
+  if (counts['N2']) return { status: 'inert',
+    hint: 'N₂ is locked behind a triple bond — one of the strongest in all of nature (remember it on the Bench?). Life can’t pull nitrogen straight from the air. You need nitrogen in a looser form — which molecule did you build that holds nitrogen with single bonds?' };
   const exact = SYNTH.find(r => eq(r.reagents, counts));
   if (exact) {
     if (exact.energy === energyId) return { status: 'ok', recipe: exact, product: exact.product };

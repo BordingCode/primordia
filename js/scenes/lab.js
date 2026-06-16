@@ -166,7 +166,8 @@ export class LabScene {
       return;
     }
     game.sfx.reject(); this.reactPulse = 0.4;
-    if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + (res.hint || `These could react — but not under ${energyDef(this.energy).name.toLowerCase()}. Try a different energy.`));
+    if (res.status === 'inert') this.toast(game, 'fail', 'Too strongly bound', pre + res.hint);
+    else if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + (res.hint || `These could react — but not under ${energyDef(this.energy).name.toLowerCase()}. Try a different energy.`));
     else if (res.status === 'incomplete') this.toast(game, 'fail', 'Something is missing', pre + 'The right reagents are here, but not enough of them. Add another.');
     else this.toast(game, 'fail', 'No reaction', pre + (res.hint || 'These reagents don’t combine. Rethink the recipe.'));
   }
