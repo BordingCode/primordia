@@ -55,7 +55,7 @@ export function init(game, environment) {
     pt.checked = !!G.state.predictMode;
     pt.addEventListener('change', () => {
       G.state.predictMode = pt.checked; G.persist();
-      if (pt.checked) flash('Predict mode on — guess the outcome before each reaction.');
+      if (pt.checked) flash('Reason mode on — work out the energy each reaction needs.');
     });
   }
   const sb = $('sandboxBtn');
@@ -436,6 +436,31 @@ export function openPredict(game, actual, onPick) {
   const skip = document.createElement('button'); skip.className = 'predict-skip';
   skip.textContent = 'Not sure — just react';
   skip.addEventListener('click', () => pick(null));
+  body.appendChild(skip);
+  ov.classList.remove('hidden');
+}
+
+// Reason-then-test: instead of guessing the product's NAME (luck), you commit to the CONDITION —
+// which energy these reagents need. That's the actual lesson ("conditions decide the outcome").
+export function openEnergyPredict(game, onPick) {
+  const ov = $('predict'), body = $('predictBody');
+  if (!ov || !body) { onPick(null); return; }
+  const h = ov.querySelector('.sheet-head h2'); if (h) h.textContent = 'What will make these react?';
+  const lede = ov.querySelector('.predict-lede');
+  if (lede) lede.textContent = 'Reason out the conditions — which energy do these ingredients need? A right call earns insight.';
+  body.innerHTML = '';
+  const grid = document.createElement('div'); grid.className = 'predict-grid';
+  ENERGIES.forEach(e => {
+    const b = document.createElement('button'); b.className = 'predict-chip';
+    b.style.setProperty('--c', e.color);
+    b.innerHTML = `<span class="pc-abbr">${e.glyph}</span><span class="pc-name">${e.name}</span>`;
+    b.addEventListener('click', () => { ov.classList.add('hidden'); onPick(e.id); });
+    grid.appendChild(b);
+  });
+  body.appendChild(grid);
+  const skip = document.createElement('button'); skip.className = 'predict-skip';
+  skip.textContent = 'Not sure — just react with the current energy';
+  skip.addEventListener('click', () => { ov.classList.add('hidden'); onPick(null); });
   body.appendChild(skip);
   ov.classList.remove('hidden');
 }

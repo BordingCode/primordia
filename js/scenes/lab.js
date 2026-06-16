@@ -9,7 +9,7 @@ import { ITEMS, SYNTH, ENERGIES, synthMatch, item as synthItem, energy as energy
 const SUB = { 0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉' };
 const fsub = (f) => Object.keys(f).map(k => k + (f[k] > 1 ? SUB[f[k]] : '')).join('');
 const NSLOTS = 6;
-const PREDICT_REWARD = 3;   // Insight for correctly predicting a reaction's outcome
+const REASON_REWARD = 8;    // Insight for reasoning out the right energy/condition (≈ a block's own award)
 
 // visual descriptor for any reagent id (element / molecule / item)
 function visual(id) {
@@ -35,7 +35,7 @@ export class LabScene {
     this.layout(game);
     game.coachOnce('lab_experiment', { kind: 'hint',
       title: 'Experiment freely',
-      sub: 'Load anything, pick any energy, and react — you don’t have to follow the goals. Before each reaction you’ll guess the outcome: a correct call earns insight, and a wrong one teaches the most. (Turn guessing off in the menu.)' });
+      sub: 'Load anything and react — you don’t have to follow the goals. Before each reaction you’ll reason out which energy it needs: a right call earns insight, a wrong one tells you why. (Turn this off in the menu.)' });
   }
 
   layout(game) {
@@ -111,35 +111,31 @@ export class LabScene {
   react(game) {
     const counts = this.counts();
     if (Object.keys(counts).length === 0) { this.toast(game, 'fail', 'Empty reactor', 'Tap reagents below to load them.'); game.sfx.reject(); return; }
-    // Predict-then-test (opt-in): guess the outcome first, then see if you were right.
+    // Reason-then-test (default on): you commit to the CONDITION — which energy these need — before
+    // reacting. That's the real chemistry lesson ("conditions decide the outcome"), not name-guessing.
     if (game.state.predictMode) {
-      const res = synthMatch(counts, this.energy);
-      const actual = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
-      import('../ui/hud.js').then(UI => UI.openPredict(game, actual, (guess) => this._doReact(game, guess)));
+      import('../ui/hud.js').then(UI => UI.openEnergyPredict(game, (energyId) => {
+        if (energyId) this.energy = energyId;        // your reasoned choice becomes the condition
+        this._doReact(game, energyId ? { predictedEnergy: energyId } : null);
+      }));
     } else {
       this._doReact(game, null);
     }
   }
 
-  // Resolve a reaction. `prediction` is a product id, 'nothing', or null (predict mode off).
+  // Resolve a reaction. `prediction` is { predictedEnergy } (you reasoned out a condition) or null.
   _doReact(game, prediction) {
     const counts = this.counts();
     game.logExperiment();
     const res = synthMatch(counts, this.energy);
     const made = (res.status === 'ok' || res.status === 'aside') ? res.product : 'nothing';
-    // Reasoning, not luck, is what the game rewards: a correct prediction earns Insight —
-    // including correctly calling that NOTHING would form (that's real chemical judgement too).
-    const correctCall = prediction != null && (
-      (made === 'nothing' && prediction === 'nothing') ||
-      (made !== 'nothing' && (prediction === made || prediction === 'actual'))
-    );
+    // Reward UNDERSTANDING over luck: committing to the right energy (a correct "because") pays a
+    // prominent bonus — on par with making the thing, so reasoning matters as much as producing.
+    const reasonedRight = !!(prediction && prediction.predictedEnergy && made !== 'nothing');
     let pre = '';
-    if (prediction != null) {
-      if (correctCall) { pre = `✓ You called it! +✦${PREDICT_REWARD} `; game.award(PREDICT_REWARD); }
-      else {
-        const g = prediction === 'nothing' ? 'nothing' : (synthItem(prediction)?.name || prediction);
-        pre = `✗ You guessed ${g}. `;
-      }
+    if (prediction && prediction.predictedEnergy) {
+      if (reasonedRight) { pre = `✓ Right conditions! +✦${REASON_REWARD} `; game.award(REASON_REWARD); }
+      else pre = `✗ Not the right conditions for these. `;
     }
 
     if (res.status === 'ok' || res.status === 'aside') {
