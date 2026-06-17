@@ -11,16 +11,41 @@
 // your weak link. A recurring UV flare (early Earth had no ozone) is the real stakes.
 import { hexA, rgb01 } from '../render/molecules.js';
 
+function $quizHidden() { const q = document.getElementById('quiz'); return !q || q.classList.contains('hidden'); }
+
 const UP_MAX = 3;                 // extra levels each invention can be raised
 const HAZ_COOLDOWN = 18;          // seconds of calm between UV flares
 const HAZ_WARN = 3.4;             // telegraph time before a flare strikes
 
 // Each upgrade has its own colour (matching the Lab item), a short name + felt effect.
 const UPGRADES = [
-  { key: 'membrane', name: 'Membrane', effect: 'less energy leaks', color: '#7fd0ff' },
+  { key: 'membrane', name: 'Membrane', effect: 'less energy leaks · UV shield', color: '#7fd0ff' },
   { key: 'protein',  name: 'Enzymes',  effect: '+energy per feed',  color: '#54d7ff' },
   { key: 'rna',      name: 'RNA',      effect: 'divides sooner',    color: '#8ef0d0' },
 ];
+
+// Deduce-it-yourself: when a failure mode hits, the player works out WHICH invention answers it.
+// The "why" teaches the function — and only then does that upgrade button reveal what it does.
+const DIAGNOSIS = {
+  starve: { q: 'A cell ran low and starved — it couldn’t pull enough energy from the food it ate. What does it need more of?',
+    options: [
+      { t: 'Enzymes — to squeeze more energy out of each bite.', correct: true, why: 'Right. Enzymes (proteins) are the cell’s machines: they break food down and release more energy per feed.' },
+      { t: 'RNA — so it can copy itself faster.', why: 'RNA helps it DIVIDE, not feed. A starving cell that divides just makes two starving cells.' },
+      { t: 'A thicker membrane — to hold more food inside.', why: 'The membrane slows energy LEAKING out; it doesn’t pull more energy from food. That job is the enzymes’.' },
+    ] },
+  uv: { q: 'A blast of raw UV radiation just scoured the colony (early Earth had no ozone). Which invention shields the cells?',
+    options: [
+      { t: 'The Membrane — a stronger wall takes the hit.', correct: true, why: 'Yes — the membrane is also the cell’s shield. A thicker wall absorbs the UV so less reaches the inside.' },
+      { t: 'Enzymes — to repair the damage with energy.', why: 'Enzymes make energy from food; they don’t block radiation. You need a barrier — the membrane.' },
+      { t: 'RNA — to outbreed the losses.', why: 'Dividing faster can’t outrun a flare that hits everyone at once. You need to BLOCK it: the membrane.' },
+    ] },
+  rna: { q: 'A well-fed cell just split into two! Which of its three inventions let it copy itself?',
+    options: [
+      { t: 'RNA — the molecule that carries and copies the recipe.', correct: true, why: 'Exactly. RNA stores the cell’s instructions and copies them, so the cell can reproduce — the heart of being alive.' },
+      { t: 'The Membrane — it pinched in two.', why: 'The membrane wraps the cell, but it can’t copy the instructions inside. That’s RNA’s job.' },
+      { t: 'Enzymes — they built a second cell.', why: 'Enzymes power the cell, but the blueprint that gets copied to make a new cell is the RNA.' },
+    ] },
+};
 
 export class CellScene {
   constructor() {
@@ -44,7 +69,7 @@ export class CellScene {
     this.layout(game);
     if (!this.started && game.hasItem('protocell')) { this.spawnCell(this.cx, this.cy, 0.88); this.started = true; }
     game.coachOnce('cell_parts', { kind: 'hint', title: 'Your three inventions',
-      sub: 'A protocell is a Membrane, an RNA copier and protein Enzymes. Spend insight (top-right ✦) to upgrade each — the Membrane stops energy leaking and shields from UV, Enzymes pull more energy from food, RNA divides sooner.' });
+      sub: 'A protocell is three parts: a Membrane, protein Enzymes, and an RNA copier. Spend insight (top-right ✦) to upgrade each — but when trouble strikes, you’ll work out which one the colony needs.' });
   }
 
   layout(game) {
@@ -100,7 +125,19 @@ export class CellScene {
     import('../ui/hud.js').then(UI => UI.flash(`${u.name} evolved · ${u.effect}`));
   }
 
+  // fire a symptom diagnosis once; the player deduces which invention answers it, and only then
+  // does that upgrade button reveal its job. (Guarded so each fires a single time.)
+  diagnose(game, key) {
+    if (game.state.cellDiag[key] || this._diagOpen) return;
+    this._diagOpen = true;
+    import('../ui/hud.js').then(UI => UI.askDiagnosis(game, DIAGNOSIS[key], () => {
+      game.state.cellDiag[key] = true; game.persist(); this._diagOpen = false;
+    }));
+  }
+
   update(dt, game) {
+    // pause the colony while a question/quiz/review is open, so cells don't quietly die behind it
+    if (this._diagOpen || !$quizHidden()) return;
     // food budget regen
     this.regen += dt;
     if (this.regen > 1.7 && this.foodBudget < this.foodMax) { this.foodBudget++; this.regen = 0; }
@@ -152,9 +189,11 @@ export class CellScene {
         this.spawnCell(c.x + Math.cos(a) * 20, c.y + Math.sin(a) * 20, 0.5);
         game.sfx.bond();
         game.gl.burst(c.x, c.y, 14, { color: [0.6, 1, 0.85], size: 14, speed: 70, life: 0.5, alpha: 0.7 });
+        this.diagnose(game, 'rna');     // it just copied itself — which invention did that?
       }
       // death
-      if (c.energy <= 0) { c.dead = 0.001; game.gl.burst(c.x, c.y, 12, { color: [1, 0.5, 0.45], size: 14, speed: 60, life: 0.6, alpha: 0.7 }); }
+      if (c.energy <= 0) { c.dead = 0.001; game.gl.burst(c.x, c.y, 12, { color: [1, 0.5, 0.45], size: 14, speed: 60, life: 0.6, alpha: 0.7 });
+        this.diagnose(game, 'starve'); }
     }
 
     this.updateHazard(dt, game);
@@ -195,8 +234,7 @@ export class CellScene {
       if (h.t > HAZ_COOLDOWN && living >= 2) {
         h.phase = 'warn'; h.t = 0;
         game.sfx.reject();
-        game.coachOnce('cell_uv', { kind: 'hint', title: 'A UV flare is coming',
-          sub: 'Early Earth had no ozone layer, so raw ultraviolet scoured the seas. It drains every cell. A stronger Membrane is your shield — upgrade it.' });
+        this.diagnose(game, 'uv');     // a flare is coming — which invention shields against it?
         import('../ui/hud.js').then(UI => UI.flash('☼ UV flare building — brace the colony'));
       }
     } else if (h.phase === 'warn') {
@@ -313,9 +351,10 @@ export class CellScene {
     ctx.textAlign = 'center';
     ctx.fillStyle = hexA(b.color, 0.95); ctx.font = '700 13px "Outfit", system-ui, sans-serif';
     ctx.fillText(b.name, x, y - h / 2 + 16);
-    // effect
-    ctx.fillStyle = 'rgba(220,235,255,0.6)'; ctx.font = '400 10px "Outfit", system-ui, sans-serif';
-    ctx.fillText(b.effect, x, y - h / 2 + 30);
+    // effect — hidden until the player has DIAGNOSED this invention's job from a symptom
+    const known = game.state.cellDiag && game.state.cellDiag[b.key];
+    ctx.fillStyle = known ? 'rgba(220,235,255,0.6)' : 'rgba(220,235,255,0.32)'; ctx.font = `${known ? '400' : 'italic 400'} 10px "Outfit", system-ui, sans-serif`;
+    ctx.fillText(known ? b.effect : '· job unknown ·', x, y - h / 2 + 30);
     // level pips
     const pipY = y + h / 2 - 18, pipGap = 12, pipX0 = x - pipGap;
     for (let i = 0; i < UP_MAX; i++) {

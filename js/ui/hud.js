@@ -221,6 +221,12 @@ export function maybeQuiz(game, stageId, onDone) {
     { head: QUIZ[stageId].length > 1 ? 'Quick check' : 'One quick check', reward: 6, review: false });
 }
 
+// a one-off "diagnose the symptom" question (used by the Cell stage to make you DEDUCE
+// which invention a failure mode needs, rather than reading it off the buttons)
+export function askDiagnosis(game, item, onDone) {
+  runQuestions(game, [item], onDone, { head: 'Diagnose your cell', reward: 5, review: false });
+}
+
 // spaced, INTERLEAVED retrieval of earlier concepts (mix stages, shuffle options)
 export function showReview(game, onDone, onlyDue = false) {
   const now = Date.now();

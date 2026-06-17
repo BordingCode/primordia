@@ -11,6 +11,23 @@ const fsub = (f) => Object.keys(f).map(k => k + (f[k] > 1 ? SUB[f[k]] : '')).joi
 const NSLOTS = 6;
 const REASON_REWARD = 8;    // Insight for reasoning out the right energy/condition (≈ a block's own award)
 
+// Energies ranked by how fierce they are — so a wrong pick gets a DIRECTIONAL nudge
+// ("gentler / stronger") instead of the answer, keeping the deduction alive.
+const ENERGY_RANK = { none: 0, heat: 1, uv: 2, lightning: 3 };
+function energyNudge(pickedId, correctId) {
+  const p = ENERGY_RANK[pickedId] ?? 0, c = ENERGY_RANK[correctId] ?? 0;
+  if (p > c) return 'Too fierce for these — they’d react under something gentler. Which?';
+  if (p < c) return 'Not enough energy — these need a stronger jolt to react. Which?';
+  return 'Not these conditions — a different kind of energy would do it.';
+}
+// Credit the player's REASONING by name when they call the right condition (not just "correct").
+const ENERGY_REASON = {
+  lightning: 'you reasoned these stable molecules need a violent spark to break them open.',
+  uv: 'you reasoned sunlight’s photons carried the energy to drive it.',
+  heat: 'you reasoned steady heat could push it uphill.',
+  none: 'you reasoned it needs no spark — it just assembles on its own.',
+};
+
 // visual descriptor for any reagent id (element / molecule / item)
 function visual(id) {
   if (ELEMENTS[id]) return { abbr: ELEMENTS[id].sym, color: ELEMENTS[id].glow };
@@ -134,8 +151,8 @@ export class LabScene {
     const reasonedRight = !!(prediction && prediction.predictedEnergy && made !== 'nothing');
     let pre = '';
     if (prediction && prediction.predictedEnergy) {
-      if (reasonedRight) { pre = `✓ Right conditions! +✦${REASON_REWARD} `; game.award(REASON_REWARD); }
-      else pre = `✗ Not the right conditions for these. `;
+      if (reasonedRight) { pre = `✓ You called it — ${ENERGY_REASON[this.energy] || 'right conditions.'} +✦${REASON_REWARD} `; game.award(REASON_REWARD); }
+      else pre = '✗ Not the right conditions. ';
     }
 
     if (res.status === 'ok' || res.status === 'aside') {
@@ -163,7 +180,7 @@ export class LabScene {
     }
     game.sfx.reject(); this.reactPulse = 0.4;
     if (res.status === 'inert') this.toast(game, 'fail', 'Too strongly bound', pre + res.hint);
-    else if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + (res.hint || `These could react — but not under ${energyDef(this.energy).name.toLowerCase()}. Try a different energy.`));
+    else if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + energyNudge(this.energy, res.recipe && res.recipe.energy));
     else if (res.status === 'incomplete') this.toast(game, 'fail', 'Something is missing', pre + 'The right reagents are here, but not enough of them. Add another.');
     else this.toast(game, 'fail', 'No reaction', pre + (res.hint || 'These reagents don’t combine. Rethink the recipe.'));
   }

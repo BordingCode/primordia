@@ -18,6 +18,7 @@ const DEFAULT = {
   sandbox: false,                // sandbox mode currently on
   coloniesLost: 0,               // protocell colonies that perished (a real setback count)
   cellUpgrades: { membrane: 0, protein: 0, rna: 0 },  // extra levels bought for each invention (Cell)
+  cellDiag: {},                  // which inventions' jobs the player has DIAGNOSED from symptoms
   wonderDrags: 0,                // successful tray pickups — fades the "drag-me" cue once learned
   oxygenCrisisSeen: false,       // the Great Oxygenation die-off has fired once (World)
   scene: 'forge',
