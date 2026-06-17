@@ -345,13 +345,22 @@ export function toast(game, { kind, sym, item: itm, title, sub, spark }) {
   else if (kind === 'hint') { glyph = '✦'; col = '#ffd66b'; }
   else if (kind === 'fail') { glyph = '⚐'; col = '#ff9a8a'; }
   card.style.setProperty('--c', col);
+  // The fail/hint toasts ARE the lesson — they coach you toward the answer. Give them long
+  // enough to actually read AND think, and flag that you can tap to clear them early.
+  const coaching = kind === 'fail' || kind === 'hint';
   card.innerHTML = `<div class="t-glyph">${glyph}</div><div class="t-body"><div class="t-title">${title}</div>
-    <div class="t-sub">${sub || ''}</div>${spark ? `<div class="t-fact">${spark}</div>` : ''}</div>`;
+    <div class="t-sub">${sub || ''}</div>${spark ? `<div class="t-fact">${spark}</div>` : ''}${
+      coaching ? `<div class="t-dismiss">tap to dismiss</div>` : ''}</div>`;
   wrap.appendChild(card);
   requestAnimationFrame(() => card.classList.add('show'));
   const kill = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 400); };
   card.addEventListener('click', kill);
-  setTimeout(kill, kind === 'fail' ? 3600 : 4800);
+  // Scale the on-screen time to how much there is to read (a kid reading + thinking is slow).
+  const words = `${title} ${sub || ''} ${spark || ''}`.trim().split(/\s+/).length;
+  const dwell = coaching
+    ? Math.min(16000, Math.max(7000, 2200 + words * 600))   // coaching: 7s floor, generous
+    : Math.min(8000, Math.max(4000, 1500 + words * 380));   // glance toasts: snappy
+  setTimeout(kill, dwell);
 }
 
 // ---------------- Codex ----------------

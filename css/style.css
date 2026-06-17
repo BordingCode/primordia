@@ -121,6 +121,7 @@ body{position:fixed;inset:0;}
 .t-title{font-weight:700;font-size:14.5px;color:#fff;}
 .t-sub{font-size:12.5px;color:var(--teal);font-weight:600;margin-top:1px;}
 .t-fact{font-size:12px;color:var(--ink-dim);margin-top:4px;line-height:1.45;}
+.t-dismiss{font-size:10.5px;color:var(--ink-dim);opacity:.6;margin-top:6px;letter-spacing:.3px;text-transform:uppercase;}
 
 /* ---------- overlays ---------- */
 .overlay{position:absolute;inset:0;z-index:40;display:grid;place-items:center;padding:20px;
