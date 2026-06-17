@@ -137,7 +137,11 @@ export function flash(msg) {
   let f = $('flash');
   if (!f) { f = document.createElement('div'); f.id = 'flash'; document.getElementById('stage').appendChild(f); }
   f.textContent = msg; f.classList.add('show');
-  clearTimeout(f._t); f._t = setTimeout(() => f.classList.remove('show'), 2600);
+  // Like the Lab toasts: scale the on-screen time to how much there is to read, so the long
+  // story beats (the Great Oxygenation, the lineage) aren't gone before a kid finishes them.
+  const words = String(msg).trim().split(/\s+/).length;
+  const dwell = Math.min(13000, Math.max(3000, 1600 + words * 480));
+  clearTimeout(f._t); f._t = setTimeout(() => f.classList.remove('show'), dwell);
 }
 
 // ---------------- Objectives ----------------
