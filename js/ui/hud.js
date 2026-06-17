@@ -4,6 +4,7 @@ import { MOLECULES, FUSION } from '../data/recipes.js';
 import { ITEMS, SYNTH, ASIDES, ENERGIES, item as synthItem, energy as energyDef } from '../data/synthesis.js';
 import { LEARN } from '../data/learn.js';
 import { HOWTO } from '../data/howto.js';
+import { QUIZ, QUIZ_ORDER } from '../data/quiz.js';
 import { unlock as audioUnlock } from '../engine/audio.js';
 
 let G = null, env = null;
@@ -37,9 +38,19 @@ export function init(game, environment) {
 
   $('codexBtn').addEventListener('click', openCodex);
   $('insightBtn').addEventListener('click', openCodex);
-  $('menuBtn').addEventListener('click', () => $('menu').classList.remove('hidden'));
+  $('menuBtn').addEventListener('click', () => {
+    $('reviewBtn').classList.toggle('hidden', !hasReview(game));
+    $('reviewBtn').textContent = dueCount(game) > 0 ? `✦ Review what you’ve learned (${dueCount(game)} due)` : '✦ Review what you’ve learned';
+    $('menu').classList.remove('hidden');
+  });
+  $('reviewBtn').addEventListener('click', () => { $('menu').classList.add('hidden'); showReview(game, () => updateReviewPrompt(game), false); });
+  $('reviewPrompt').addEventListener('click', () => showReview(game, () => updateReviewPrompt(game), true));
+  const mt = $('motionToggle');
+  if (mt) { mt.checked = !!G.state.reduceMotion;
+    mt.addEventListener('change', () => { G.state.reduceMotion = mt.checked; G.persist(); if (env.setReduceMotion) env.setReduceMotion(mt.checked); });
+    if (env.setReduceMotion) env.setReduceMotion(G.state.reduceMotion); }
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', (e) => e.target.closest('.overlay').classList.add('hidden')));
-  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.classList.add('hidden'); }));
+  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', (e) => { if (e.target === o && o.id !== 'quiz') o.classList.add('hidden'); }));
   document.querySelectorAll('.ctab').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('.ctab').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); renderCodexBody(c.dataset.ctab);
@@ -142,6 +153,94 @@ export function flash(msg) {
   const words = String(msg).trim().split(/\s+/).length;
   const dwell = Math.min(13000, Math.max(3000, 1600 + words * 480));
   clearTimeout(f._t); f._t = setTimeout(() => f.classList.remove('show'), dwell);
+}
+
+// ---------------- conceptual quiz + spaced review ----------------
+// Distractors are real, documented misconceptions; answering either way shows a one-line "why".
+// Powers BOTH the after-stage quick-check and the spaced review (spacing + retrieval + interleaving).
+const DAY = 86400000;
+const REVIEW_DAYS = [1, 3, 7, 14, 30, 90];      // Leitner-style widening intervals
+function rShuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function reviewPool(game) {
+  const out = [];
+  QUIZ_ORDER.forEach(sid => { if (game.state.quizSeen[sid] && QUIZ[sid]) QUIZ[sid].forEach((q, qi) => out.push({ ...q, cardId: sid + '#' + qi, stage: sid })); });
+  return out;
+}
+export function syncReview(game) {
+  let changed = false;
+  reviewPool(game).forEach(c => { if (!game.state.review[c.cardId]) { game.state.review[c.cardId] = { box: 0, due: Date.now() + DAY }; changed = true; } });
+  if (changed) game.persist();
+}
+export function dueCount(game) { const now = Date.now(); return reviewPool(game).filter(c => (game.state.review[c.cardId] ? game.state.review[c.cardId].due : Infinity) <= now).length; }
+export function hasReview(game) { return reviewPool(game).length > 0; }
+function gradeCard(game, cardId, correct) {
+  const r = game.state.review[cardId] || { box: 0, due: 0 };
+  r.box = correct ? Math.min(r.box + 1, REVIEW_DAYS.length - 1) : Math.max(0, r.box - 1);
+  r.due = Date.now() + REVIEW_DAYS[r.box] * DAY;
+  game.state.review[cardId] = r; game.persist();
+}
+
+function runQuestions(game, items, onDone, { head, reward, review }) {
+  const ov = $('quiz'); let i = 0;
+  function renderQ() {
+    const item = items[i];
+    $('quizHead').textContent = head;
+    $('quizProg').textContent = items.length > 1 ? `${i + 1} / ${items.length}` : '';
+    $('quizQ').textContent = item.q;
+    const why = $('quizWhy'); why.classList.add('hidden'); why.classList.remove('ok');
+    const next = $('quizNext'); next.classList.add('hidden');
+    const box = $('quizOpts'); box.innerHTML = '';
+    rShuffle(item.options.slice()).forEach(opt => {
+      const b = document.createElement('button'); b.className = 'quiz-opt'; b.textContent = opt.t; b._opt = opt;
+      b.addEventListener('click', () => answer(item, opt, box, why, next), { once: true });
+      box.appendChild(b);
+    });
+    ov.classList.remove('hidden');
+  }
+  function answer(item, opt, box, why, next) {
+    const correctOpt = item.options.find(o => o.correct);
+    [...box.children].forEach(b => { b.disabled = true; const o = b._opt;
+      if (o.correct) b.classList.add('correct'); else if (o === opt) b.classList.add('wrong'); else b.classList.add('dim'); });
+    if (opt.correct) { game.award(reward); game.sfx && game.sfx.pickup && game.sfx.pickup(); } else game.sfx && game.sfx.reject && game.sfx.reject();
+    if (review && item.cardId) gradeCard(game, item.cardId, !!opt.correct);
+    why.innerHTML = (opt.correct ? '✓ ' : '') + (opt.why || (correctOpt && correctOpt.why) || '');
+    why.classList.toggle('ok', !!opt.correct); why.classList.remove('hidden');
+    next.textContent = i < items.length - 1 ? 'Next ›' : (review ? 'Done ›' : 'Onward ›');
+    next.classList.remove('hidden');
+    next.onclick = () => { i++; if (i < items.length) renderQ(); else { ov.classList.add('hidden'); onDone && onDone(); } };
+  }
+  renderQ();
+}
+
+// fire a stage's quick-check once, when that stage is completed
+export function maybeQuiz(game, stageId, onDone) {
+  if (game.state.quizSeen[stageId] || !QUIZ[stageId]) { onDone && onDone(); return; }
+  game.state.quizSeen[stageId] = true; game.persist();
+  runQuestions(game, QUIZ[stageId].map(q => ({ ...q })), () => { syncReview(game); updateReviewPrompt(game); onDone && onDone(); },
+    { head: QUIZ[stageId].length > 1 ? 'Quick check' : 'One quick check', reward: 6, review: false });
+}
+
+// spaced, INTERLEAVED retrieval of earlier concepts (mix stages, shuffle options)
+export function showReview(game, onDone, onlyDue = false) {
+  const now = Date.now();
+  let pool = reviewPool(game).map(c => ({ ...c, _due: game.state.review[c.cardId] ? game.state.review[c.cardId].due : 0 }));
+  if (onlyDue) pool = pool.filter(c => c._due <= now);
+  pool.sort((a, b) => a._due - b._due);
+  const items = rShuffle(pool.slice(0, 6));
+  if (!items.length) { onDone && onDone(); return; }
+  runQuestions(game, items, () => { updateReviewPrompt(game); flash('Nice — those ideas are a little sharper now.'); onDone && onDone(); }, { head: 'Review what you’ve learned', reward: 4, review: true });
+}
+
+let _revTimer = null;
+export function updateReviewPrompt(game) {
+  const n = dueCount(game), el = $('reviewPrompt'); if (!el) return;
+  $('menuBtn').classList.toggle('has-due', n > 0);
+  clearTimeout(_revTimer);
+  if (n === 0) { el.classList.add('hidden'); return; }
+  el.textContent = `✦ ${n} to review ›`;
+  el.classList.remove('hidden');
+  _revTimer = setTimeout(() => el.classList.add('hidden'), 6500);
 }
 
 // ---------------- Objectives ----------------
@@ -508,9 +607,9 @@ export function showLineage() {
     requestAnimationFrame(() => { row.style.opacity = '1'; row.style.transform = 'none'; });
     chain.scrollTop = chain.scrollHeight;
     i++;
-    if (i >= LINEAGE.length) nextBtn.textContent = 'And so… ✦';
+    nextBtn.textContent = i >= LINEAGE.length ? 'And so… ✦' : (i === 1 ? 'Then… ›' : 'And then… ›');
   };
-  nextBtn.textContent = 'Next ›';
+  nextBtn.textContent = 'Tap to retrace ›';
   addStep();                              // first link shown immediately
   nextBtn.onclick = () => {
     if (i < LINEAGE.length) { addStep(); return; }

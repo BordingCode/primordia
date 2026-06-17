@@ -181,6 +181,7 @@ export class CellScene {
       game.celebrate(this.cx, this.cy, '#a8ffe0'); game.sfx.discover();
       if (game.scenes.world) game.scenes.world.beginLife(game);
       import('../ui/hud.js').then(UI => { UI.refreshGoals(game); UI.flash('A living colony! The world stirs →'); });
+      setTimeout(() => game.maybeQuiz('cell'), 2000);   // concept quick-check on what makes it alive
     }
   }
 

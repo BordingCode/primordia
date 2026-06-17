@@ -10,6 +10,9 @@ const DEFAULT = {
   insight: 0,
   hintsUsed: {},                 // id -> tier of hint revealed
   predictMode: true,             // default ON: guess the outcome before each reaction (toggle off in menu)
+  reduceMotion: false,           // suppress particle bursts / heavy FX (toggle in menu)
+  quizSeen: {},                  // stageId -> true once its concept quiz has fired
+  review: {},                    // cardId -> { box, due } spaced-repetition schedule
   coachSeen: {},                 // one-time coaching toasts already shown
   sandboxUnlocked: false,        // bought with insight — frees every stage & reagent
   sandbox: false,                // sandbox mode currently on

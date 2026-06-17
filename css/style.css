@@ -124,6 +124,32 @@ body{position:fixed;inset:0;}
 .t-fact{font-size:12px;color:var(--ink-dim);margin-top:4px;line-height:1.45;}
 .t-dismiss{font-size:10.5px;color:var(--ink-dim);opacity:.6;margin-top:6px;letter-spacing:.3px;text-transform:uppercase;}
 
+/* ---------- spaced-review nudge + quiz ---------- */
+.hidden{display:none !important;}
+#reviewPrompt{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 58px);
+  z-index:20;font-size:12.5px;font-weight:600;color:var(--gold);background:rgba(255,214,107,.12);
+  border:1px solid rgba(255,214,107,.4);border-radius:18px;padding:7px 15px;cursor:pointer;
+  backdrop-filter:var(--glass-blur);box-shadow:0 6px 20px rgba(0,0,0,.4);
+  animation:revpulse 2.8s ease-in-out infinite;}
+#reviewPrompt:active{transform:translateX(-50%) scale(.96);}
+@keyframes revpulse{0%,100%{box-shadow:0 6px 20px rgba(0,0,0,.4),0 0 0 rgba(255,214,107,0)}
+  50%{box-shadow:0 6px 20px rgba(0,0,0,.4),0 0 16px rgba(255,214,107,.35)}}
+.iconbtn.has-due{position:relative;}
+.iconbtn.has-due::after{content:"";position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 8px var(--gold);}
+.quiz-prog{font-size:12px;color:var(--ink-dim);font-weight:600;}
+.quiz-q{font-size:16px;line-height:1.5;color:#fff;font-weight:600;margin:6px 0 14px;}
+.quiz-opt{display:block;width:100%;text-align:left;padding:13px 15px;margin-bottom:9px;border-radius:13px;
+  font-size:14px;font-weight:600;color:var(--ink);background:rgba(120,170,255,.07);
+  border:1px solid var(--panel-brd);cursor:pointer;font-family:inherit;transition:.15s;}
+.quiz-opt:active{transform:scale(.99);}
+.quiz-opt.correct{background:rgba(63,240,200,.16);border-color:rgba(63,240,200,.6);color:#bfffe9;}
+.quiz-opt.wrong{background:rgba(255,92,140,.14);border-color:rgba(255,92,140,.55);color:#ffd0d8;}
+.quiz-opt.dim{opacity:.45;}.quiz-opt:disabled{cursor:default;}
+.quiz-why{margin-top:6px;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.5;
+  background:rgba(84,215,255,.10);border:1px solid rgba(84,215,255,.28);color:var(--cyan);}
+.quiz-why.ok{background:rgba(63,240,200,.10);border-color:rgba(63,240,200,.3);color:#bfffe9;}
+
 /* ---------- overlays ---------- */
 .overlay{position:absolute;inset:0;z-index:40;display:grid;place-items:center;padding:20px;
   background:rgba(4,6,16,.66);backdrop-filter:blur(8px);}

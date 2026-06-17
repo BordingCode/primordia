@@ -123,6 +123,7 @@ export class GLLayer {
   constructor(canvas) {
     this.canvas = canvas;
     this.isReady = false;
+    this.lowMotion = false;        // when true, suppress particle bursts (reduce-motion)
     this.particles = [];
     this.nebula = { colA: [0.18, 0.10, 0.42], colB: [0.10, 0.45, 0.55], intensity: 1.0, focus: [0.5, 0.45] };
     this._target = { ...this.nebula };
@@ -185,6 +186,7 @@ export class GLLayer {
   }
 
   burst(x, y, n, opts = {}) {
+    if (this.lowMotion) return;               // reduce-motion: no particle showers
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const sp = (opts.speed || 120) * (0.3 + Math.random() * 0.7);

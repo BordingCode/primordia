@@ -136,8 +136,8 @@ export class WorldScene {
       game.celebrate(this.cx, this.cy - this.R * 0.3, '#8effa8');
       game.gl.burst(this.cx, this.cy, 90, { color: [0.5, 1, 0.6], speed: 260, size: 26, life: 1.6, alpha: 0.9 });
       game.sfx.discover();
-      // the synthesis beat: after the finale flash, let the player retrace the whole chain
-      import('../ui/hud.js').then(UI => { UI.flash('A living world that breathes oxygen 🌍'); setTimeout(() => UI.showLineage(game), 1500); });
+      // the synthesis beat: finale flash → a concept check on the oxygen story → retrace the chain
+      import('../ui/hud.js').then(UI => { UI.flash('A living world that breathes oxygen 🌍'); setTimeout(() => game.maybeQuiz('world', () => UI.showLineage(game)), 1500); });
     }
     if (this.lifeBegun && Math.random() < 0.3) {
       const a = Math.random() * Math.PI * 2;

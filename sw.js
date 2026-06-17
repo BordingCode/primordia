@@ -1,15 +1,15 @@
 // sw.js — offline cache.
 // Strategy: navigations = network-first (fresh deploys win), assets = stale-while-revalidate
 // (instant + self-updating). This avoids the "GitHub Pages stuck on old version" trap.
-const CACHE = 'primordia-v26';
+const CACHE = 'primordia-v27';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=8',
+  './css/style.css?v=9',
   './manifest.json',
   './assets/icon.svg',
   './assets/icon-maskable.svg',
-  './js/main.js?v=19',
+  './js/main.js?v=20',
   './js/engine/rng.js',
   './js/engine/save.js',
   './js/engine/audio.js',
@@ -22,6 +22,7 @@ const ASSETS = [
   './js/data/synthesis.js',
   './js/data/learn.js',
   './js/data/howto.js',
+  './js/data/quiz.js',
   './js/scenes/forge.js',
   './js/scenes/bench.js',
   './js/scenes/lab.js',

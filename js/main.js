@@ -193,9 +193,16 @@ const game = {
     if (this.state.sandbox) return;
     if (this.stageUnlocked(id) && !this.state[flag]) {
       this.state[flag] = true; this.persist();
-      setTimeout(() => { this.go(id, true); UI.flash(`New stage unlocked · ${this.scenes[id].title}`); }, 850);
+      // reaching a new stage means you've finished the previous one → its quick-check fires
+      const prior = { bench: 'forge', lab: 'bench', cell: 'lab' }[id];
+      setTimeout(() => {
+        this.go(id, true); UI.flash(`New stage unlocked · ${this.scenes[id].title}`);
+        if (prior) setTimeout(() => this.maybeQuiz(prior), 1500);
+      }, 850);
     }
   },
+  // fire a stage's conceptual quick-check once it's complete (also seeds it into spaced review)
+  maybeQuiz(stageId, onDone) { UI.maybeQuiz(this, stageId, onDone); },
 };
 
 function resize() {
@@ -293,13 +300,14 @@ function boot() {
   game.scenes.lab = new LabScene();
   game.scenes.cell = new CellScene();
   game.scenes.world = new WorldScene();
-  UI.init(game, { setAudioEnabled, audioIsEnabled, resetSave: () => { Save.resetSave(); location.reload(); } });
+  UI.init(game, { setAudioEnabled, audioIsEnabled, setReduceMotion: (on) => { gl.lowMotion = on; }, resetSave: () => { Save.resetSave(); location.reload(); } });
   resize();
   game.checkGates();
   const saved = game.state.scene;
   game._activate(saved && game.scenes[saved] && game.stageUnlocked(saved) ? saved : 'forge');
   UI.setInsight(game.state.insight);
   UI.refreshCodex(game);
+  UI.syncReview(game); UI.updateReviewPrompt(game);   // schedule earned concepts; nudge if any are due
   loop.start();
   if (!game.state.introSeen) UI.showIntro(game, () => { game.state.introSeen = true; game.persist(); UI.maybeHowto(game.sceneName); });
   else UI.maybeHowto(game.sceneName);
