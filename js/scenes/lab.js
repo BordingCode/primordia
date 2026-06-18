@@ -9,23 +9,30 @@ import { ITEMS, SYNTH, ENERGIES, synthMatch, item as synthItem, energy as energy
 const SUB = { 0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉' };
 const fsub = (f) => Object.keys(f).map(k => k + (f[k] > 1 ? SUB[f[k]] : '')).join('');
 const NSLOTS = 6;
-const REASON_REWARD = 8;    // Insight for reasoning out the right energy/condition (≈ a block's own award)
+// A reasoned correct call must never be out-paid by a lucky discovery: the predict bonus pays
+// AT LEAST what the thing you predicted is worth. So knowing ≥ making — the currency teaches it.
+const REASON_MIN = 8;       // floor, for asides/unscored products
+function reasonReward(productId) {
+  const it = synthItem(productId);
+  const made = it && it.kind === 'cell' ? 40 : it && it.kind === 'polymer' ? 20 : it ? 14 : 0;
+  return Math.max(REASON_MIN, made);   // match the product's own award (14 / 20 / 40)
+}
 
 // Energies ranked by how fierce they are — so a wrong pick gets a DIRECTIONAL nudge
 // ("gentler / stronger") instead of the answer, keeping the deduction alive.
 const ENERGY_RANK = { none: 0, heat: 1, uv: 2, lightning: 3 };
 function energyNudge(pickedId, correctId) {
   const p = ENERGY_RANK[pickedId] ?? 0, c = ENERGY_RANK[correctId] ?? 0;
-  if (p > c) return 'Too fierce for these — they’d react under something gentler. Which?';
-  if (p < c) return 'Not enough energy — these need a stronger jolt to react. Which?';
-  return 'Not these conditions — a different kind of energy would do it.';
+  if (p > c) return 'Too fierce — try a gentler energy. Which one?';
+  if (p < c) return 'Not enough — these need something that RIPS the bonds apart. Which?';
+  return 'Not these conditions — a different kind of energy would do it. Which?';
 }
 // Credit the player's REASONING by name when they call the right condition (not just "correct").
 const ENERGY_REASON = {
-  lightning: 'you reasoned these stable molecules need a violent spark to break them open.',
-  uv: 'you reasoned sunlight’s photons carried the energy to drive it.',
-  heat: 'you reasoned steady heat could push it uphill.',
-  none: 'you reasoned it needs no spark — it just assembles on its own.',
+  lightning: 'only a violent spark breaks stable molecules open.',
+  uv: 'sunlight’s photons carried just the energy to drive it.',
+  heat: 'steady heat was enough to push it uphill.',
+  none: 'no spark needed — the pieces assemble on their own.',
 };
 
 // visual descriptor for any reagent id (element / molecule / item)
@@ -44,6 +51,9 @@ export class LabScene {
     this.palette = [];
     this.energyChips = [];
     this.flashT = 0; this.reactPulse = 0;
+    // Tracks wrong-energy misses per recipe so the FIRST miss only nudges a direction
+    // ("gentler? / something that RIPS bonds?") and the answer is revealed on the SECOND.
+    this.energyMisses = {};
   }
 
   enter(game) {
@@ -151,11 +161,19 @@ export class LabScene {
     const reasonedRight = !!(prediction && prediction.predictedEnergy && made !== 'nothing');
     let pre = '';
     if (prediction && prediction.predictedEnergy) {
-      if (reasonedRight) { pre = `✓ You called it — ${ENERGY_REASON[this.energy] || 'right conditions.'} +✦${REASON_REWARD} `; game.award(REASON_REWARD); }
+      if (reasonedRight) {
+        // Reflect the player's OWN correct reasoning back — name the energy and why it works —
+        // so the win lands as understanding, not a checkmark. Pays ≥ the discovery itself.
+        const reward = reasonReward(made);
+        const en = energyDef(this.energy);
+        pre = `✓ You called it: ${en ? en.name.toLowerCase() : this.energy} — ${ENERGY_REASON[this.energy] || 'the right conditions.'} +✦${reward} `;
+        game.award(reward);
+      }
       else pre = '✗ Not the right conditions. ';
     }
 
     if (res.status === 'ok' || res.status === 'aside') {
+      if (res.product) this.energyMisses[res.product] = 0;   // solved it — reset its nudge tier
       const it = synthItem(res.product);
       const aside = res.status === 'aside';
       const isNew = aside ? !game.hasAside(res.product) : !game.hasItem(res.product);
@@ -180,7 +198,15 @@ export class LabScene {
     }
     game.sfx.reject(); this.reactPulse = 0.4;
     if (res.status === 'inert') this.toast(game, 'fail', 'Too strongly bound', pre + res.hint);
-    else if (res.status === 'wrong-energy') this.toast(game, 'fail', 'No reaction', pre + energyNudge(this.energy, res.recipe && res.recipe.energy));
+    else if (res.status === 'wrong-energy') {
+      // Two-tier nudge: FIRST miss on a recipe gives a directional hint (keeps the deduction
+      // alive); only the SECOND miss reveals the specific answer, so a retry isn't a free lookup.
+      const key = res.recipe ? res.recipe.product : 'wrong';
+      const n = (this.energyMisses[key] = (this.energyMisses[key] || 0) + 1);
+      const hint = n >= 2 ? (res.recipe && res.recipe.hint) || energyNudge(this.energy, res.recipe && res.recipe.energy)
+                          : energyNudge(this.energy, res.recipe && res.recipe.energy);
+      this.toast(game, 'fail', 'No reaction', pre + hint);
+    }
     else if (res.status === 'incomplete') this.toast(game, 'fail', 'Something is missing', pre + 'The right reagents are here, but not enough of them. Add another.');
     else this.toast(game, 'fail', 'No reaction', pre + (res.hint || 'These reagents don’t combine. Rethink the recipe.'));
   }
