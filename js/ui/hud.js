@@ -583,47 +583,204 @@ export function openEnergyPredict(game, onPick) {
   ov.classList.remove('hidden');
 }
 
-// ---------------- Finale: your journey (synthesis recap) ----------------
-// The one moment the whole game connects into a STORY the player can retell. They tap through
-// their own lineage and watch the chain — hydrogen → stars → molecules → life → world — assemble.
-const LINEAGE = [
-  { glyph: 'H',  title: 'One atom of hydrogen', text: 'You began with the simplest, oldest atom in the universe.' },
-  { glyph: '✦',  title: 'Forged in a star', text: 'By fusing nuclei, you made helium, then carbon, nitrogen and oxygen — the atoms of life.' },
-  { glyph: '⬡',  title: 'The first molecules', text: 'You filled every atom’s bonds — building water, methane, ammonia and the early air.' },
-  { glyph: '⚡',  title: 'Lightning in the soup', text: 'A spark through that air forged amino acids and HCN — the seed of the genetic code.' },
-  { glyph: '🧬', title: 'A self-copying thread', text: 'You stacked the letters into RNA — a molecule that carries information and copies itself.' },
-  { glyph: '◯',  title: 'A wall and workers', text: 'Fatty acids wrapped a membrane; amino acids became proteins, the cell’s machines.' },
-  { glyph: '⬭',  title: 'The first life', text: 'You sealed them into a protocell and kept a colony alive against starvation and UV.' },
-  { glyph: '🌍', title: 'A living world', text: 'Life spread, breathed out oxygen, survived its own poison, and inherited the Earth.' },
-];
-const LINEAGE_END = 'From a single atom of hydrogen — you built a living world. That may be how life really began.';
+// ---------------- Finale: your journey (synthesis the PLAYER assembles) ----------------
+// The one moment the whole game connects into a STORY the player can RETELL — not by READING a
+// pre-written recap, but by re-deriving it with their own hands. The player taps their own
+// discovered items in order (H → C/N/O → molecules → blocks → RNA/membrane → protocell → world).
+// Each correct tap draws ONE connector and reveals the one-line "because…" link between stages.
+// The chain is BUILT from the real FUSION + MOLECULES + SYNTH tables, using only what the player
+// actually discovered — so the spine (each stage's product is the next stage's input) is ENACTED,
+// not narrated. A wrong/early tap gently no-ops with a "what came before this?" nudge (never a
+// punishment), and after a pause an "Assemble it for me" fallback finishes the chain for anyone
+// who just wants to watch — so it's never a wall.
+
+// Build the ordered spine of nodes from the player's real discoveries. Each node carries the
+// "because" line that justifies WHY it followed from the node before it (sourced from the data
+// tables wherever possible). Optional nodes are skipped if the player never found them, so the
+// chain is honestly THEIRS.
+function buildLineageNodes(game) {
+  const nodes = [];
+  const has = (id) => game.has(id);
+  // 1. the seed — always there
+  nodes.push({ glyph: 'H', label: 'Hydrogen', color: '#bfffe6',
+    because: 'You began with the simplest, oldest atom in the universe.' });
+  // 2. fusion: the atoms of life, in the order the star forges them (skip any not discovered)
+  const fusedOrder = [
+    { sym: 'He', because: 'Hydrogen nuclei fused, step by step, into helium — the reaction that powers the Sun.' },
+    { sym: 'C',  because: 'Three helium nuclei collided to make carbon — life’s backbone atom.' },
+    { sym: 'O',  because: 'Carbon captured another helium to become oxygen — the breath of life.' },
+    { sym: 'N',  because: 'Carbon burning hydrogen forged nitrogen, too — the atom every protein needs.' },
+  ];
+  fusedOrder.forEach(f => { if (game.hasElement(f.sym)) nodes.push({ glyph: f.sym, label: ELEMENTS[f.sym].name, color: ELEMENTS[f.sym].glow, because: f.because }); });
+  // 3. molecules: fill every bond. Show the early-air/ocean ones the later steps actually use.
+  const molOrder = [
+    { id: 'H2O', because: 'You filled oxygen’s bonds with two hydrogens — water, the cradle of all chemistry.' },
+    { id: 'CH4', because: 'Carbon took four hydrogens — methane, a brick of the primordial air.' },
+    { id: 'NH3', because: 'Nitrogen took three hydrogens — ammonia, life’s only usable nitrogen.' },
+    { id: 'CO2', because: 'Carbon and oxygen made CO₂ — the raw carbon the soup will build from.' },
+  ];
+  molOrder.forEach(m => { if (game.hasMolecule(m.id)) { const mol = molById(m.id); nodes.push({ glyph: '⬡', label: mol.name, color: '#8ef0d0', because: m.because }); } });
+  // 4. building blocks & polymers: the spine from soup → genetic letter → self-copying thread,
+  //    and the lipids → wall branch. Each "because" is the real reaction that made it.
+  const blockOrder = [
+    { id: 'HCN',        because: 'A lightning spark through methane and ammonia bred hydrogen cyanide — the feedstock of the genetic code.' },
+    { id: 'glycine',    because: 'That same spark through the early air forged glycine — the first amino acid (Miller–Urey, 1953).' },
+    { id: 'adenine',    because: 'Five HCN, warmed, condensed into adenine — a letter of the genetic code (Oró, 1961).' },
+    { id: 'ribose',    because: 'UV-made formaldehyde, warmed, coiled into ribose — the sugar that backbones RNA.' },
+    { id: 'phosphate',  because: 'Phosphorus took on oxygen to become phosphate — RNA’s backbone and life’s battery.' },
+    { id: 'nucleotide', because: 'Sugar, base and phosphate clasped into a nucleotide — a single letter, ready to write.' },
+    { id: 'rna',        because: 'You strung the letters into RNA — one thread that carries the message AND copies itself.' },
+    { id: 'protein',    because: 'Amino acids linked into a protein — the cell’s machines and catalysts.' },
+    { id: 'fatty_acid', because: 'Carbon chains grew long in a vent’s heat — fatty acids, one end loving water, one fleeing it.' },
+    { id: 'membrane',   because: 'In water the fatty acids wrapped themselves into a membrane — life’s very first wall.' },
+  ];
+  blockOrder.forEach(b => { if (has(b.id)) { const it = ITEMS[b.id]; nodes.push({ glyph: it.abbr && it.abbr.length <= 3 ? it.abbr : '✦', label: it.name, color: it.color, because: b.because }); } });
+  // 5. protocell + world — the threshold, and what it became
+  if (has('protocell')) nodes.push({ glyph: '⬭', label: 'Protocell', color: '#a8ffe0',
+    because: 'A membrane sealed RNA and proteins inside — and you kept a colony alive: the first life.' });
+  nodes.push({ glyph: '🌍', label: 'A living world', color: '#9fe6ff',
+    because: 'Life spread, breathed out oxygen, survived its own poison, and inherited the Earth.' });
+  return nodes;
+}
+
+const LINEAGE_END = 'From a single atom of hydrogen, by your own hand — you built a living world. That may be how life really began.';
 
 export function showLineage() {
   const ov = $('lineage'), chain = $('lineageChain'), nextBtn = $('lineageNext');
   if (!ov || !chain || !nextBtn) return;
+  const nodes = buildLineageNodes(G);
+  const reduced = !!(G && G.state && G.state.reduceMotion)
+    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+
   chain.innerHTML = '';
-  let i = 0;
-  const addStep = () => {
-    const s = LINEAGE[i];
+  let placed = 0;          // how many nodes are confirmed into the assembled chain
+  let autoTimer = null;
+  let autoMode = false;    // true while "assemble for me" is running the chain itself
+
+  // the assembled chain (top) — connectors + nodes appear here as the player gets them right
+  const builtWrap = document.createElement('div');
+  builtWrap.className = 'lin-built';
+  chain.appendChild(builtWrap);
+
+  // the palette of the player's own discovered pieces to tap (bottom)
+  const trayLabel = document.createElement('div');
+  trayLabel.className = 'lin-tray-label';
+  trayLabel.textContent = 'Tap your pieces in the order you made them:';
+  chain.appendChild(trayLabel);
+  const tray = document.createElement('div');
+  tray.className = 'lin-tray';
+  chain.appendChild(tray);
+
+  const chips = nodes.map((node, idx) => {
+    const c = document.createElement('button');
+    c.className = 'lin-chip';
+    c.style.setProperty('--c', node.color);
+    c.innerHTML = `<span class="lin-chip-g">${node.glyph}</span><span class="lin-chip-n">${node.label}</span>`;
+    c.addEventListener('click', () => onPick(idx));
+    tray.appendChild(c);
+    return c;
+  });
+
+  // shuffle the tray order so the player must RECALL the sequence, not read it left-to-right.
+  // (The very first node, H, is left findable; everything else is jumbled.)
+  rShuffle(chips.slice(1)).forEach(c => tray.appendChild(c));
+
+  function placeNode(idx) {
+    const node = nodes[idx];
+    // draw the connector between the previous node and this one (skipped before the first node)
+    if (placed > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'lin-conn' + (reduced ? ' nomotion' : '');
+      conn.innerHTML = `<span class="lin-conn-line"></span><span class="lin-conn-why">${node.because}</span>`;
+      builtWrap.appendChild(conn);
+      requestAnimationFrame(() => conn.classList.add('show'));
+    }
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:12px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid rgba(255,255,255,0.07);opacity:0;transform:translateY(10px);transition:opacity .4s ease, transform .4s ease';
-    row.innerHTML = `<div style="flex:0 0 34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border-radius:50%;background:rgba(140,240,208,0.12);color:#bfffe6">${s.glyph}</div>`
-      + `<div style="flex:1"><b style="color:#dff3ff">${s.title}</b><div style="font-size:13px;color:rgba(210,228,255,0.72);margin-top:2px">${s.text}</div></div>`;
-    chain.appendChild(row);
-    requestAnimationFrame(() => { row.style.opacity = '1'; row.style.transform = 'none'; });
+    row.className = 'lin-node' + (reduced ? ' nomotion' : '');
+    row.style.setProperty('--c', node.color);
+    row.innerHTML = `<div class="lin-node-orb">${node.glyph}</div>`
+      + `<div class="lin-node-body"><b>${node.label}</b>${placed === 0 ? `<div class="lin-node-sub">${node.because}</div>` : ''}</div>`;
+    builtWrap.appendChild(row);
+    requestAnimationFrame(() => row.classList.add('show'));
+
+    const chip = chips[idx];
+    chip.classList.add('placed'); chip.disabled = true;
+    placed++;
     chain.scrollTop = chain.scrollHeight;
-    i++;
-    nextBtn.textContent = i >= LINEAGE.length ? 'And so… ✦' : (i === 1 ? 'Then… ›' : 'And then… ›');
-  };
-  nextBtn.textContent = 'Tap to retrace ›';
-  addStep();                              // first link shown immediately
-  nextBtn.onclick = () => {
-    if (i < LINEAGE.length) { addStep(); return; }
-    // final beat: replace the chain with the closing line, then let them close
-    chain.innerHTML = `<p style="font-size:16px;line-height:1.5;color:#dff3ff;text-align:center;padding:18px 6px">${LINEAGE_END}</p>`;
+    updateNext();
+  }
+
+  function onPick(idx) {
+    if (idx === placed) {                 // correct: the next node in the spine
+      if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+      G.sfx && G.sfx.pickup && G.sfx.pickup();
+      placeNode(idx);
+      if (placed >= nodes.length) finish();
+      else armAutoFallback();
+    } else if (idx < placed) {
+      // already placed — gentle no-op
+      G.sfx && G.sfx.reject && G.sfx.reject();
+    } else {
+      // tapped too far ahead — never punish, just point back
+      G.sfx && G.sfx.reject && G.sfx.reject();
+      const want = nodes[placed];
+      flash(`Not yet — what came before ${want.label}? Tap the piece you made just before it.`);
+      const chip = chips[idx];
+      if (!reduced) { chip.classList.add('nudge'); setTimeout(() => chip.classList.remove('nudge'), 420); }
+    }
+  }
+
+  // graceful path for a player who just wants to WATCH: after a pause with no progress, offer to
+  // assemble the rest automatically (and a player can press it any time).
+  function armAutoFallback() {
+    if (autoTimer) clearTimeout(autoTimer);
+    // the "assemble for me" button is always live; after a pause we just make it glow so a player
+    // who's stuck or only wants to watch can see the way out.
+    autoTimer = setTimeout(() => { if (placed < nodes.length) nextBtn.classList.add('lin-hintbtn'); }, 9000);
+  }
+  function autoAssemble() {
+    if (autoMode) return;
+    autoMode = true;
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    nextBtn.classList.remove('lin-hintbtn');
+    nextBtn.disabled = true;
+    const step = () => {
+      if (placed < nodes.length) {
+        placeNode(placed);
+        if (placed >= nodes.length) { autoMode = false; finish(); }
+        else setTimeout(step, reduced ? 120 : 650);
+      }
+    };
+    step();
+  }
+
+  function updateNext() {
+    if (autoMode || placed >= nodes.length) return;   // finish() / autoAssemble manage the button
+    nextBtn.classList.remove('lin-hintbtn');
+    nextBtn.disabled = false;
+    nextBtn.textContent = placed <= 1 ? 'Assemble it for me ›' : 'Assemble the rest for me ›';
+    nextBtn.onclick = autoAssemble;
+  }
+
+  function finish() {
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    const end = document.createElement('p');
+    end.className = 'lin-end' + (reduced ? ' nomotion' : '');
+    end.textContent = LINEAGE_END;
+    builtWrap.appendChild(end);
+    requestAnimationFrame(() => end.classList.add('show'));
+    tray.classList.add('lin-tray-done');
+    chain.scrollTop = chain.scrollHeight;
+    nextBtn.classList.remove('lin-hintbtn');
+    nextBtn.disabled = false;
     nextBtn.textContent = 'Close';
     nextBtn.onclick = () => ov.classList.add('hidden');
-  };
+  }
+
+  // start: the seed (H) is already placed for the player so the FIRST connector they earn is
+  // H → its first product (the assembly proper begins from a clear anchor).
+  placeNode(0);
+  armAutoFallback();
   ov.classList.remove('hidden');
 }
 
