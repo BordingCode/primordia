@@ -149,7 +149,9 @@ export function flash(msg) {
   let f = $('flash');
   if (!f) { f = document.createElement('div'); f.id = 'flash'; }
   f.textContent = msg;
-  if (f.parentElement !== wrap) wrap.appendChild(f);     // always last → stacks below any toast
+  const rp = wrap.querySelector('#reviewPrompt');        // stack below toasts but above the review pill
+  if (rp) wrap.insertBefore(f, rp);
+  else if (f.parentElement !== wrap) wrap.appendChild(f);
   requestAnimationFrame(() => f.classList.add('show'));
   // Like the Lab toasts: scale the on-screen time to how much there is to read, so the long
   // story beats (the Great Oxygenation, the lineage) aren't gone before a kid finishes them.
@@ -249,6 +251,7 @@ export function updateReviewPrompt(game) {
   clearTimeout(_revTimer);
   if (n === 0) { el.classList.add('hidden'); return; }
   el.textContent = `✦ ${n} to review ›`;
+  $('toasts').appendChild(el);          // sit at the bottom of the toast column — never over a toast/flash or the panel
   el.classList.remove('hidden');
   _revTimer = setTimeout(() => el.classList.add('hidden'), 6500);
 }
@@ -464,8 +467,8 @@ export function toast(game, { kind, sym, item: itm, title, sub, spark }) {
   card.innerHTML = `<div class="t-glyph">${glyph}</div><div class="t-body"><div class="t-title">${title}</div>
     <div class="t-sub">${sub || ''}</div>${spark ? `<div class="t-fact">${spark}</div>` : ''}${
       coaching ? `<div class="t-dismiss">tap to dismiss</div>` : ''}</div>`;
-  const fl = wrap.querySelector('#flash');                // keep toasts above the flash banner
-  if (fl) wrap.insertBefore(card, fl); else wrap.appendChild(card);
+  const anchor = wrap.querySelector('#flash') || wrap.querySelector('#reviewPrompt'); // keep toasts above flash & review pill
+  if (anchor) wrap.insertBefore(card, anchor); else wrap.appendChild(card);
   requestAnimationFrame(() => card.classList.add('show'));
   const kill = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 400); };
   card.addEventListener('click', kill);
