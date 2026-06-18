@@ -99,14 +99,14 @@ body{position:fixed;inset:0;}
 .tab.shake{animation:shake .4s;}
 .goal.locked-goal{opacity:.5;}
 
-/* flash banner */
-#flash{position:absolute;left:50%;top:64px;transform:translate(-50%,-8px);z-index:35;
+/* flash banner — lives inside #toasts so it stacks BELOW a toast, never over it */
+#flash{align-self:center;max-width:100%;
   background:rgba(10,16,32,.9);border:1px solid rgba(120,200,255,.4);color:#dff0ff;
   padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;backdrop-filter:var(--glass-blur);
   box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 24px rgba(80,200,255,.25);
   opacity:0;pointer-events:none;transition:.35s cubic-bezier(.2,.9,.3,1.2);
-  max-width:min(92vw,420px);text-align:center;line-height:1.4;}
-#flash.show{opacity:1;transform:translate(-50%,0);}
+  text-align:center;line-height:1.4;transform:translateY(-8px);}
+#flash.show{opacity:1;transform:translateY(0);}
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
 
 /* ---------- toasts ---------- */

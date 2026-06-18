@@ -145,14 +145,18 @@ export function maybeHowto(scene) {
 
 // transient top banner
 export function flash(msg) {
+  const wrap = $('toasts');
   let f = $('flash');
-  if (!f) { f = document.createElement('div'); f.id = 'flash'; document.getElementById('stage').appendChild(f); }
-  f.textContent = msg; f.classList.add('show');
+  if (!f) { f = document.createElement('div'); f.id = 'flash'; }
+  f.textContent = msg;
+  if (f.parentElement !== wrap) wrap.appendChild(f);     // always last → stacks below any toast
+  requestAnimationFrame(() => f.classList.add('show'));
   // Like the Lab toasts: scale the on-screen time to how much there is to read, so the long
   // story beats (the Great Oxygenation, the lineage) aren't gone before a kid finishes them.
   const words = String(msg).trim().split(/\s+/).length;
   const dwell = Math.min(13000, Math.max(3000, 1600 + words * 480));
-  clearTimeout(f._t); f._t = setTimeout(() => f.classList.remove('show'), dwell);
+  clearTimeout(f._t);
+  f._t = setTimeout(() => { f.classList.remove('show'); setTimeout(() => { if (f.parentElement) f.remove(); }, 380); }, dwell);
 }
 
 // ---------------- conceptual quiz + spaced review ----------------
@@ -460,7 +464,8 @@ export function toast(game, { kind, sym, item: itm, title, sub, spark }) {
   card.innerHTML = `<div class="t-glyph">${glyph}</div><div class="t-body"><div class="t-title">${title}</div>
     <div class="t-sub">${sub || ''}</div>${spark ? `<div class="t-fact">${spark}</div>` : ''}${
       coaching ? `<div class="t-dismiss">tap to dismiss</div>` : ''}</div>`;
-  wrap.appendChild(card);
+  const fl = wrap.querySelector('#flash');                // keep toasts above the flash banner
+  if (fl) wrap.insertBefore(card, fl); else wrap.appendChild(card);
   requestAnimationFrame(() => card.classList.add('show'));
   const kill = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 400); };
   card.addEventListener('click', kill);

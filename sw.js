@@ -9,7 +9,7 @@ const ASSETS = [
   './manifest.json',
   './assets/icon.svg',
   './assets/icon-maskable.svg',
-  './js/main.js?v=21',
+  './js/main.js?v=22',
   './js/engine/rng.js',
   './js/engine/save.js',
   './js/engine/audio.js',
