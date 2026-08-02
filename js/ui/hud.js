@@ -35,6 +35,7 @@ function reagentText(rec) {
 export function init(game, environment) {
   G = game; env = environment;
   buildNav();
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncAppBadge(game); });
 
   $('codexBtn').addEventListener('click', openCodex);
   $('insightBtn').addEventListener('click', openCodex);
@@ -244,10 +245,19 @@ export function showReview(game, onDone, onlyDue = false) {
   runQuestions(game, items, () => { updateReviewPrompt(game); flash('Nice — those ideas are a little sharper now.'); onDone && onDone(); }, { head: 'Review what you’ve learned', reward: 4, review: true });
 }
 
+// Badging API: puts the due-count on the home-screen icon so a closed tab still nudges you.
+// Supported on Safari/iOS 16.4+ and desktop Chrome/Edge; no-op elsewhere (feature-detected).
+function syncAppBadge(game) {
+  if (!('setAppBadge' in navigator)) return;
+  const n = dueCount(game);
+  (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+}
+
 let _revTimer = null;
 export function updateReviewPrompt(game) {
   const n = dueCount(game), el = $('reviewPrompt'); if (!el) return;
   $('menuBtn').classList.toggle('has-due', n > 0);
+  syncAppBadge(game);
   clearTimeout(_revTimer);
   if (n === 0) { el.classList.add('hidden'); return; }
   el.textContent = `✦ ${n} to review ›`;
